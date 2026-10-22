@@ -45,6 +45,20 @@
             </form>
         </div>
 
+        <!-- Adsterra Banner 300x250 (kode per-domain) -->
+        <div class="w-full flex justify-center mb-8">
+            <div style="width:300px;height:250px;">
+                <script>
+                    (function () {
+                        var isDigitcuan = location.hostname.indexOf('douyin.digitcuan.site') !== -1;
+                        var bannerKey = isDigitcuan ? '0c0c17e954032c7867a6c4d91f454196' : 'b6113a1ab73c3e0350ccd7ba5c4ed4e4';
+                        document.write('<script>atOptions = {\'key\' : \'' + bannerKey + '\', \'format\' : \'iframe\', \'height\' : 250, \'width\' : 300, \'params\' : {}};<\/script>');
+                        document.write('<script src="https://bellnewyork.org/22/' + bannerKey + '"><\/script>');
+                    })();
+                </script>
+            </div>
+        </div>
+
         <!-- Loading Spinner -->
         <div id="loading" class="hidden flex flex-col items-center space-y-3 mb-8">
             <div class="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
@@ -66,24 +80,14 @@
                     <h3 id="result-title" class="text-lg font-bold text-slate-100 line-clamp-2 mb-2"></h3>
                     <p id="result-author" class="text-sm text-slate-400 flex items-center space-x-2"><span>Author: </span><span class="text-slate-200 font-medium"></span></p>
                 </div>
-                <div class="flex flex-col gap-3 pt-4">
-                    <a
-                        id="download-btn-direct"
-                        href="#"
-                        target="_blank"
-                        rel="noopener"
-                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-xl text-center transition duration-200 shadow-md flex items-center justify-center space-x-2"
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <a 
+                        id="download-btn-hd" 
+                        href="#" 
+                        class="flex-grow bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-xl text-center transition duration-200 shadow-md flex items-center justify-center space-x-2"
                     >
                         <span>Download HD (No Watermark)</span>
                     </a>
-                    <a
-                        id="download-btn-hd"
-                        href="#"
-                        class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-6 rounded-xl text-center transition duration-200 border border-slate-700 flex items-center justify-center space-x-2 text-sm"
-                    >
-                        <span>Alternatif: Download via Server (Save As)</span>
-                    </a>
-                    <p class="text-xs text-slate-500">Tombol utama mengunduh langsung dari server Douyin (cepat, tidak memakai kuota hosting). Di HP: tahan tombolnya lalu pilih simpan/unduh. Kalau tombol utama malah memutar video, pakai tombol alternatif agar file langsung tersimpan.</p>
                 </div>
             </div>
         </div>
@@ -105,7 +109,6 @@
         const resultTitle = document.getElementById('result-title');
         const resultAuthor = document.getElementById('result-author').querySelector('span:nth-child(2)');
         const downloadBtnHd = document.getElementById('download-btn-hd');
-        const downloadBtnDirect = document.getElementById('download-btn-direct');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -135,7 +138,6 @@
                     resultTitle.textContent = data.title;
                     resultAuthor.textContent = data.author;
                     resultCover.src = data.cover || 'https://via.placeholder.com/300x500?text=No+Cover';
-                    downloadBtnDirect.href = data.video_url;
                     downloadBtnHd.href = '/download?url=' + encodeURIComponent(data.video_url) + '&name=douyin-' + data.aweme_id + '.mp4';
                     resultCard.classList.remove('hidden');
                 } else {
@@ -147,6 +149,17 @@
                 errorAlert.classList.remove('hidden');
             }
         });
+    </script>
+
+    <!-- Adsterra Social Bar (kode per-domain) -->
+    <script>
+        (function () {
+            var isDigitcuan = location.hostname.indexOf('douyin.digitcuan.site') !== -1;
+            var s = document.createElement('script');
+            s.setAttribute('data-cfasync', 'false');
+            s.src = isDigitcuan ? 'https://bellnewyork.org/14/5edf3692f2ecff6acd50a9e7395c5b74' : 'https://bellnewyork.org/14/d212b0df6445a6c51e1fdd91a7135756';
+            document.body.appendChild(s);
+        })();
     </script>
 </body>
 </html>
