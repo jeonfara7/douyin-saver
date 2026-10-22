@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TikTok & Douyin Downloader Tanpa Watermark HD Gratis{% endblock %} — DigitCuan Downloader</title>
+    <meta name="description" content="{% block description %}Download video TikTok dan Douyin tanpa watermark kualitas HD, MP3, dan foto slideshow. Gratis, tanpa daftar, tanpa install aplikasi.{% endblock %}">
+    <link rel="canonical" href="{{ site_url }}{% block canonical %}/{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="DigitCuan Downloader">
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:description" content="{{ self.description() }}">
+    <meta property="og:url" content="{{ site_url }}{{ self.canonical() }}">
+    <meta property="og:image" content="{{ site_url }}/static/icon-512.png">
+    <meta name="twitter:card" content="summary">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" href="/static/icon-192.png">
+    <meta name="theme-color" content="#0B132B">
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-lime-400 selection:text-slate-950">
+    <!-- Header -->
+    <header class="w-full border-b border-slate-800" style="background-color:#0B132B;">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+            <a href="/" class="flex items-center space-x-2">
+                <span class="text-2xl font-black text-white">DigitCuan<span style="color:#84CC16;">.</span></span>
+                <span class="text-xs bg-slate-800 text-slate-300 py-1 px-2 rounded-full font-mono">Downloader</span>
+            </a>
+            <nav class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-300">
+                <a href="/" class="hover:text-white">Beranda</a>
+                <a href="/tiktok-downloader" class="hover:text-white">TikTok Downloader</a>
+                <a href="/douyin-downloader" class="hover:text-white">Douyin Downloader</a>
+                <a href="/cara-penggunaan" class="hover:text-white">Cara Penggunaan</a>
+                <a href="/faq" class="hover:text-white">FAQ</a>
+                <a href="/kontak" class="hover:text-white">Kontak</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-slate-800 mt-16" style="background-color:#0B132B;">
+        <div class="max-w-6xl mx-auto px-4 py-10 grid gap-8 md:grid-cols-3 text-sm">
+            <div>
+                <p class="text-white font-bold mb-2">DigitCuan Downloader</p>
+                <p class="text-slate-400">Tool gratis dari <a href="https://digitcuan.site/" class="underline hover:text-white">DigitCuan</a> untuk menyimpan video TikTok & Douyin tanpa watermark, audio MP3, dan foto slideshow — untuk koleksi pribadi dan bahan riset konten.</p>
+            </div>
+            <div>
+                <p class="text-white font-bold mb-2">Unduhan</p>
+                <ul class="space-y-1 text-slate-400">
+                    <li><a href="/tiktok-downloader" class="hover:text-white">Download Video TikTok</a></li>
+                    <li><a href="/tiktok-downloader" class="hover:text-white">Download MP3 TikTok</a></li>
+                    <li><a href="/douyin-downloader" class="hover:text-white">Download Video Douyin</a></li>
+                    <li><a href="/douyin-downloader" class="hover:text-white">Download MP3 & Foto Douyin</a></li>
+                </ul>
+            </div>
+            <div>
+                <p class="text-white font-bold mb-2">Bantuan</p>
+                <ul class="space-y-1 text-slate-400">
+                    <li><a href="/cara-penggunaan" class="hover:text-white">Cara Penggunaan</a></li>
+                    <li><a href="/faq" class="hover:text-white">FAQ</a></li>
+                    <li><a href="/kontak" class="hover:text-white">Kontak</a></li>
+                    <li><a href="https://digitcuan.site/tools/" class="hover:text-white">Tools Gratis DigitCuan Lainnya</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="border-t border-slate-800 py-4 text-center text-xs text-slate-500 px-4">
+            &copy; 2026 DigitCuan — Gunakan hasil unduhan dengan bijak dan hormati hak cipta kreator.
+        </div>
+    </footer>
+
+    <!-- Adsterra Social Bar (kode per-domain) -->
+    <script>
+        (function () {
+            var isDigitcuan = location.hostname.indexOf('douyin.digitcuan.site') !== -1;
+            var s = document.createElement('script');
+            s.setAttribute('data-cfasync', 'false');
+            s.src = isDigitcuan ? 'https://bellnewyork.org/14/5edf3692f2ecff6acd50a9e7395c5b74' : 'https://bellnewyork.org/14/d212b0df6445a6c51e1fdd91a7135756';
+            document.body.appendChild(s);
+        })();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
