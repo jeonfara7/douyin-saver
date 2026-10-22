@@ -17,6 +17,14 @@
     <link rel="icon" href="/static/icon-192.png">
     <meta name="theme-color" content="#0B132B">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ad-rail { display: none; position: fixed; top: 110px; z-index: 30; width: 160px; height: 600px; }
+        .ad-rail-left { left: 6px; }
+        .ad-rail-right { right: 6px; }
+        @media (min-width: 1500px) { .ad-rail { display: block; } }
+        .ad-leaderboard { display: none; }
+        @media (min-width: 768px) { .ad-leaderboard { display: flex; } }
+    </style>
     {% block head_extra %}{% endblock %}
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-lime-400 selection:text-slate-950">
@@ -37,6 +45,20 @@
             </nav>
         </div>
     </header>
+
+    <!-- Adsterra Leaderboard 728x90 (kode per-domain) -->
+    <div class="ad-leaderboard w-full justify-center pt-4 px-4">
+        <div style="width:728px;height:90px;max-width:100%;">
+            <script>
+                (function () {
+                    var isDigitcuan = location.hostname.indexOf('douyin.digitcuan.site') !== -1;
+                    var lbKey = isDigitcuan ? '363dbb64e0f6e64ba268ebf18e6bf933' : '651753e852142e4d1e89f26523a3defb';
+                    document.write('<script>atOptions = {\'key\' : \'' + lbKey + '\', \'format\' : \'iframe\', \'height\' : 90, \'width\' : 728, \'params\' : {}};<\/script>');
+                    document.write('<script src="https://bellnewyork.org/22/' + lbKey + '"><\/script>');
+                })();
+            </script>
+        </div>
+    </div>
 
     <main class="flex-grow w-full">
         {% block content %}{% endblock %}
@@ -72,6 +94,28 @@
             &copy; 2026 DigitCuan — Gunakan hasil unduhan dengan bijak dan hormati hak cipta kreator.
         </div>
     </footer>
+
+    <!-- Adsterra Skyscraper 160x600 — rel kiri & kanan (kode per-domain, hanya layar lebar) -->
+    <div class="ad-rail ad-rail-left">
+        <script>
+            (function () {
+                var isDigitcuan = location.hostname.indexOf('douyin.digitcuan.site') !== -1;
+                var railKey = isDigitcuan ? '6188f1e0fb0076ebb9a25b911eedf4fe' : 'a3730305e66a93f8afda23b6550c3b27';
+                document.write('<script>atOptions = {\'key\' : \'' + railKey + '\', \'format\' : \'iframe\', \'height\' : 600, \'width\' : 160, \'params\' : {}};<\/script>');
+                document.write('<script src="https://bellnewyork.org/22/' + railKey + '"><\/script>');
+            })();
+        </script>
+    </div>
+    <div class="ad-rail ad-rail-right">
+        <script>
+            (function () {
+                var isDigitcuan = location.hostname.indexOf('douyin.digitcuan.site') !== -1;
+                var railKey = isDigitcuan ? '6188f1e0fb0076ebb9a25b911eedf4fe' : 'a3730305e66a93f8afda23b6550c3b27';
+                document.write('<script>atOptions = {\'key\' : \'' + railKey + '\', \'format\' : \'iframe\', \'height\' : 600, \'width\' : 160, \'params\' : {}};<\/script>');
+                document.write('<script src="https://bellnewyork.org/22/' + railKey + '"><\/script>');
+            })();
+        </script>
+    </div>
 
     <!-- Adsterra Social Bar (kode per-domain) -->
     <script>
