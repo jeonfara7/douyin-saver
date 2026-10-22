@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}FAQ — Pertanyaan Seputar TikTok & Douyin Downloader{% endblock %}
+{% block description %}Jawaban pertanyaan umum DigitCuan Downloader: gratis atau tidak, kualitas video, MP3 Douyin, foto slideshow, postingan privat, dan batasan tool.{% endblock %}
+{% block canonical %}/faq{% endblock %}
+{% block head_extra %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Apakah DigitCuan Downloader gratis?","acceptedAnswer":{"@type":"Answer","text":"Ya, sepenuhnya gratis tanpa langganan dan tanpa pendaftaran akun. Kamu bisa mengunduh sebanyak yang kamu butuhkan."}},
+{"@type":"Question","name":"Apakah saya perlu install aplikasi?","acceptedAnswer":{"@type":"Answer","text":"Tidak. Tool berjalan sepenuhnya di browser HP maupun laptop, tanpa memasang aplikasi atau ekstensi apa pun."}},
+{"@type":"Question","name":"Kenapa hasil unduhan tidak ada watermark-nya?","acceptedAnswer":{"@type":"Answer","text":"Tool mengambil file dari server sumber sebelum watermark ditempel oleh aplikasi, sehingga file yang kamu terima adalah versi bersih tanpa logo platform dan nama pengguna."}},
+{"@type":"Question","name":"Kenapa MP3 Douyin diproses lebih lama?","acceptedAnswer":{"@type":"Answer","text":"Douyin tidak menyediakan file audio terpisah, jadi audio diekstrak dari videonya di server kami. Ekstraksi tersedia untuk video hingga 70 MB."}},
+{"@type":"Question","name":"Bisakah mengunduh postingan privat?","acceptedAnswer":{"@type":"Answer","text":"Tidak. Tool hanya memproses konten publik. Postingan privat, terhapus, atau dibatasi wilayah tidak dapat diambil datanya."}}
+]}
+</script>
+{% endblock %}
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 py-12 w-full">
+    <h1 class="text-3xl md:text-4xl font-extrabold mb-8 text-center">Pertanyaan yang Sering Diajukan</h1>
+    <div class="space-y-3 text-sm">
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4" open>
+            <summary class="font-semibold cursor-pointer">Apakah DigitCuan Downloader gratis?</summary>
+            <p class="text-slate-400 mt-2">Ya, sepenuhnya gratis tanpa langganan dan tanpa pendaftaran akun. Kamu bisa mengunduh sebanyak yang kamu butuhkan.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Apakah saya perlu install aplikasi?</summary>
+            <p class="text-slate-400 mt-2">Tidak. Tool berjalan sepenuhnya di browser HP maupun laptop, tanpa memasang aplikasi atau ekstensi apa pun. Cara ini juga lebih aman dibanding memasang APK pengunduh dari sumber yang tidak jelas.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Kenapa hasil unduhan tidak ada watermark-nya?</summary>
+            <p class="text-slate-400 mt-2">Tool mengambil file dari server sumber sebelum watermark ditempel oleh aplikasi, sehingga file yang kamu terima adalah versi bersih tanpa logo platform dan nama pengguna.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Apa kualitas videonya?</summary>
+            <p class="text-slate-400 mt-2">Kualitas mengikuti file asli yang diunggah kreator ke platform — tool tidak mengompres ulang videonya. Bila sumber menyediakan versi HD, versi itulah yang diprioritaskan.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Kenapa MP3 Douyin diproses lebih lama?</summary>
+            <p class="text-slate-400 mt-2">Douyin tidak menyediakan file audio terpisah, jadi audio diekstrak dari videonya di server kami. Ekstraksi tersedia untuk video hingga 70 MB; video yang lebih besar tetap bisa diunduh sebagai MP4.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Bisakah mengunduh foto slideshow?</summary>
+            <p class="text-slate-400 mt-2">Bisa. Untuk postingan foto TikTok maupun Douyin (termasuk tautan /note/), semua foto dalam postingan ditampilkan dan bisa disimpan satu per satu.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Bisakah mengunduh postingan privat atau Story?</summary>
+            <p class="text-slate-400 mt-2">Tidak. Tool hanya memproses konten publik yang bisa diakses tanpa login. Story dan postingan privat memerlukan akses akun pemiliknya, jadi tidak didukung.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Link apa saja yang didukung?</summary>
+            <p class="text-slate-400 mt-2">Link tiktok.com dan vt.tiktok.com dari TikTok, serta douyin.com dan v.douyin.com dari Douyin — termasuk seluruh teks bagikan yang disalin dari aplikasi.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Apakah unduhan saya disimpan di server?</summary>
+            <p class="text-slate-400 mt-2">Tidak. File dialirkan langsung dari server sumber ke perangkatmu. Khusus MP3 Douyin, video diproses sementara di server untuk ekstraksi audio lalu dihapus begitu unduhan selesai.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Apakah legal mengunduh video TikTok/Douyin?</summary>
+            <p class="text-slate-400 mt-2">Mengunduh untuk keperluan pribadi umumnya diperbolehkan, tetapi hak cipta tetap milik kreatornya. Jangan mengunggah ulang atau memakai konten orang lain untuk tujuan komersial tanpa izin.</p>
+        </details>
+    </div>
+    <p class="text-center mt-8 text-sm text-slate-400">Masih ada pertanyaan? Lihat <a href="/cara-penggunaan" class="underline" style="color:#84CC16;">panduan penggunaan</a> atau hubungi kami lewat <a href="/kontak" class="underline" style="color:#84CC16;">halaman kontak</a>.</p>
+</section>
+{% endblock %}
