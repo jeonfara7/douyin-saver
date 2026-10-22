@@ -1,10 +1,10 @@
 {% if tool == 'tiktok' %}
-{% set page_title = 'Download Video TikTok Tanpa Watermark HD + MP3 & Foto Slideshow' %}
-{% set page_desc = 'Download video TikTok tanpa watermark kualitas HD, simpan MP3 musiknya, dan unduh foto slideshow. Gratis, tanpa daftar, tanpa install aplikasi.' %}
+{% set page_title = 'Download Video TikTok Tanpa Watermark HD + MP3' %}
+{% set page_desc = 'Download video TikTok tanpa watermark kualitas HD dan simpan MP3 musiknya. Gratis, tanpa daftar, tanpa install aplikasi.' %}
 {% set page_path = '/tiktok-downloader' %}
 {% else %}
-{% set page_title = 'Download Video Douyin Tanpa Watermark + MP3 & Foto Slideshow' %}
-{% set page_desc = 'Download video Douyin tanpa watermark, ekstrak audio MP3-nya, dan unduh foto dari postingan slideshow Douyin. Gratis, tanpa daftar, tanpa install aplikasi.' %}
+{% set page_title = 'Download Video Douyin Tanpa Watermark + MP3' %}
+{% set page_desc = 'Download video Douyin tanpa watermark dan ekstrak audio MP3-nya. Gratis, tanpa daftar, tanpa install aplikasi.' %}
 {% set page_path = '/douyin-downloader' %}
 {% endif %}
 {% extends "base.html" %}
@@ -16,10 +16,10 @@
     <div class="text-center mb-8">
         {% if tool == 'tiktok' %}
         <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Video TikTok <span style="color:#84CC16;">Tanpa Watermark</span></h1>
-        <p class="text-slate-400 text-lg">Simpan video TikTok sebagai MP4 bersih kualitas HD, ambil musiknya sebagai MP3, atau unduh foto slideshow-nya — semua dari satu kolom.</p>
+        <p class="text-slate-400 text-lg">Simpan video TikTok sebagai MP4 bersih kualitas HD dan ambil musiknya sebagai MP3 — semua dari satu kolom.</p>
         {% else %}
         <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Video Douyin <span style="color:#84CC16;">Tanpa Watermark</span></h1>
-        <p class="text-slate-400 text-lg">Simpan video Douyin (TikTok versi Tiongkok) sebagai MP4 bersih, ekstrak audionya jadi MP3, atau unduh foto dari postingan slideshow-nya.</p>
+        <p class="text-slate-400 text-lg">Simpan video Douyin (TikTok versi Tiongkok) sebagai MP4 bersih dan ekstrak audionya jadi MP3.</p>
         {% endif %}
     </div>
     {% with placeholder = 'Tempel link ' + ('TikTok' if tool == 'tiktok' else 'Douyin') + ' di sini…' %}{% include "_downloader.html" %}{% endwith %}
@@ -27,16 +27,16 @@
 
 <section class="max-w-3xl mx-auto px-4 py-10 w-full">
     {% if tool == 'tiktok' %}
-    <h2 class="text-2xl font-extrabold mb-4">Pengunduh TikTok Lengkap: Video, MP3, dan Slideshow</h2>
+    <h2 class="text-2xl font-extrabold mb-4">Pengunduh TikTok Lengkap: Video & MP3</h2>
     <p class="text-slate-300 mb-4">Tempel link video TikTok mana pun — dari aplikasi reguler maupun TikTok Lite — dan tool ini mengambil file langsung dari server TikTok. Hasilnya video MP4 tanpa watermark dengan kualitas sesuai unggahan aslinya. Kalau kamu hanya butuh suaranya, pilihan Download MP3 menyimpan audio dari video tersebut, cocok untuk sound yang lagi viral atau bahan nada dering.</p>
-    <p class="text-slate-300 mb-4">Untuk postingan foto (slideshow/carousel), tool menampilkan semua fotonya satu per satu sehingga kamu bisa menyimpan gambar yang kamu mau dalam resolusi aslinya. Tersedia juga opsi video versi watermark bila kamu membutuhkannya untuk atribusi.</p>
+    <p class="text-slate-300 mb-4">Tersedia juga opsi video versi watermark bila kamu membutuhkannya untuk keperluan atribusi.</p>
     <h3 class="text-xl font-bold mb-3">Buat Apa Video TikTok Tanpa Watermark?</h3>
     <p class="text-slate-300 mb-4">Kreator memakainya untuk riset format dan hook, editor untuk bahan referensi, dan pengguna biasa untuk koleksi pribadi yang bisa ditonton offline atau dibagikan ke WhatsApp tanpa logo yang menutupi layar. Ingat, hak cipta tetap milik kreator — pakai hasil unduhan untuk keperluan pribadi dan riset, dan minta izin sebelum memakai ulang untuk tujuan komersial.</p>
     <p class="text-slate-300">Mau unduh dari Douyin juga? Buka <a href="/douyin-downloader" class="underline" style="color:#84CC16;">Douyin Downloader</a> — atau cukup tempel link Douyin di kolom yang sama, sistem mengenalinya otomatis.</p>
     {% else %}
-    <h2 class="text-2xl font-extrabold mb-4">Pengunduh Douyin: Video, MP3, dan Foto</h2>
+    <h2 class="text-2xl font-extrabold mb-4">Pengunduh Douyin: Video & MP3</h2>
     <p class="text-slate-300 mb-4">Douyin adalah TikTok versi Tiongkok — rumah bagi banyak tren dan format video yang muncul lebih dulu sebelum ramai secara global. Tool ini mengambil file video langsung dari server Douyin dan menyajikan versi bersihnya tanpa watermark, tanpa perlu memasang aplikasi Douyin di HP kamu.</p>
-    <p class="text-slate-300 mb-4">Berbeda dengan TikTok, Douyin tidak menyediakan file audio terpisah. Karena itu pilihan Download MP3 di sini bekerja dengan cara mengekstrak audio dari videonya di server kami — prosesnya butuh beberapa detik dan tersedia untuk video hingga 70 MB. Untuk postingan foto (tautan /note/), tool menampilkan seluruh foto dalam postingan agar bisa kamu simpan satu per satu.</p>
+    <p class="text-slate-300 mb-4">Berbeda dengan TikTok, Douyin tidak menyediakan file audio terpisah. Karena itu pilihan Download MP3 di sini bekerja dengan cara mengekstrak audio dari videonya di server kami — prosesnya butuh beberapa detik dan tersedia untuk video hingga 70 MB.</p>
     <h3 class="text-xl font-bold mb-3">Kenapa Kreator Indonesia Memantau Douyin?</h3>
     <p class="text-slate-300 mb-4">Format video, gaya transisi, dan tren audio sering lahir di Douyin lebih dulu. Menyimpan contohnya sebagai file lokal membuatmu bisa mempelajari polanya pelan-pelan — hook tiga detik pertama, struktur tutorial singkat, sampai cara kreator membungkus review produk — lalu membuat versi orisinalmu sendiri. Panduan memakai hasil riset seperti ini bisa kamu baca di <a href="https://digitcuan.site/riset-kompetitor-kreator/" class="underline" style="color:#84CC16;">artikel riset kompetitor DigitCuan</a>.</p>
     <p class="text-slate-300">Mau unduh dari TikTok juga? Buka <a href="/tiktok-downloader" class="underline" style="color:#84CC16;">TikTok Downloader</a> — atau tempel link TikTok di kolom yang sama, sistem mengenalinya otomatis.</p>
@@ -59,7 +59,7 @@
         <li class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <p class="text-3xl font-black mb-2" style="color:#84CC16;">3</p>
             <h3 class="font-bold mb-1">Pilih Format</h3>
-            <p class="text-slate-400">Video tanpa watermark, MP3, atau foto — sesuai yang tersedia.</p>
+            <p class="text-slate-400">Video tanpa watermark atau MP3 — sesuai yang tersedia.</p>
         </li>
     </ol>
 </section>
