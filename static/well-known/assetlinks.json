@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "site.digitcuan.downloader",
+        "sha256_cert_fingerprints": ["3C:8D:EE:5C:83:D7:FA:93:DC:F0:82:61:AE:AE:10:DA:A0:E7:29:45:B1:51:75:7A:75:94:89:30:B3:CB:67:FE"]
+      }
+    }]
