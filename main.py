@@ -353,6 +353,15 @@ async def sitemap():
     return HTMLResponse(content=xml, media_type="application/xml")
 
 
+@app.get("/.well-known/assetlinks.json")
+async def assetlinks():
+    """Digital Asset Links untuk verifikasi TWA Android (APK DigitCuan Downloader)."""
+    f = BASE_DIR / "static" / "well-known" / "assetlinks.json"
+    if f.exists():
+        return JSONResponse(content=json.loads(f.read_text()))
+    return JSONResponse(content=[])
+
+
 # ------------------------------------------------------------------- api ----
 @app.post("/api/download")
 async def api_download(payload: URLRequest):
