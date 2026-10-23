@@ -127,6 +127,35 @@
             document.body.appendChild(s);
         })();
     </script>
+    <!-- Penggeser konten untuk Social Bar: padding atas body mengikuti tinggi bar iklan yang melayang -->
+    <script>
+        (function () {
+            function adjust() {
+                var h = 0;
+                var els = document.body.children;
+                for (var i = 0; i < els.length; i++) {
+                    var el = els[i];
+                    var tag = el.tagName;
+                    if (tag === 'SCRIPT' || tag === 'HEADER' || tag === 'MAIN' || tag === 'FOOTER' || tag === 'NOSCRIPT') continue;
+                    if (el.classList && (el.classList.contains('ad-rail') || el.classList.contains('ad-leaderboard'))) continue;
+                    var cs = window.getComputedStyle(el);
+                    if (cs.position !== 'fixed') continue;
+                    var r = el.getBoundingClientRect();
+                    if (r.top <= 1 && r.height > 10 && r.width >= window.innerWidth * 0.5) {
+                        if (r.height > h) h = r.height;
+                    }
+                }
+                document.body.style.paddingTop = h ? h + 'px' : '';
+            }
+            var tries = 0;
+            var iv = setInterval(function () { adjust(); if (++tries >= 24) clearInterval(iv); }, 500);
+            window.addEventListener('resize', adjust);
+            document.addEventListener('click', function () { setTimeout(adjust, 300); }, true);
+            if (window.MutationObserver) {
+                new MutationObserver(function () { adjust(); }).observe(document.body, { childList: true, subtree: false });
+            }
+        })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
