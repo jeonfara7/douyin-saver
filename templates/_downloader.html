@@ -1,5 +1,9 @@
 <!-- Kotak unduhan utama (dipakai Beranda + halaman TikTok/Douyin) -->
 <div class="w-full bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-2xl">
+    <div class="flex gap-2 mb-4">
+        <button type="button" id="mode-single-btn" class="flex-1 font-bold py-2.5 px-4 rounded-xl text-sm transition duration-200 text-slate-950" style="background-color:#84CC16;">Satu Link</button>
+        <button type="button" id="mode-batch-btn" class="flex-1 font-bold py-2.5 px-4 rounded-xl text-sm transition duration-200 bg-slate-800 text-slate-200 hover:bg-slate-700">Banyak Link (Batch)</button>
+    </div>
     <form id="download-form" class="flex flex-col md:flex-row gap-3">
         <input
             type="text"
@@ -18,6 +22,25 @@
         </button>
     </form>
     <p class="text-xs text-slate-500 mt-3">Mendukung link tiktok.com, vt.tiktok.com, douyin.com, dan v.douyin.com — termasuk teks bagikan yang disalin dari aplikasi.</p>
+
+    <!-- Panel mode batch: tempel banyak link, diproses satu per satu -->
+    <div id="batch-panel" class="hidden mt-4">
+        <textarea
+            id="batch-input"
+            rows="5"
+            placeholder="Tempel banyak link, satu per baris — maks 10 link per batch.&#10;Contoh:&#10;https://vt.tiktok.com/xxxxx/&#10;https://v.douyin.com/xxxxx/"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 text-base"
+        ></textarea>
+        <button
+            type="button"
+            id="batch-btn"
+            class="w-full mt-3 font-bold px-8 py-3.5 rounded-xl transition duration-200 shadow-lg text-slate-950 cursor-pointer"
+            style="background-color:#84CC16;"
+        >Proses Semua</button>
+        <p id="batch-progress" class="hidden text-sm text-slate-400 mt-3 text-center"></p>
+        <p class="text-xs text-slate-500 mt-3">Link diproses satu per satu (jeda singkat antar link) agar tidak kena limit. Satu link gagal tidak menggagalkan yang lain. Tombol download tetap per item, karena browser memblokir banyak unduhan otomatis sekaligus.</p>
+        <div id="batch-results" class="mt-4 space-y-4"></div>
+    </div>
 </div>
 
 <!-- Adsterra Banner 300x250 (kode per-domain) -->
@@ -166,5 +189,123 @@
             errorMessage.textContent = err.message;
             errorAlert.classList.remove('hidden');
         }
+    });
+
+    /* ---------- Mode batch: banyak link, satu per baris, maks 10 ---------- */
+    const MAX_BATCH = 10;
+    const modeSingleBtn = document.getElementById('mode-single-btn');
+    const modeBatchBtn = document.getElementById('mode-batch-btn');
+    const batchPanel = document.getElementById('batch-panel');
+    const batchInput = document.getElementById('batch-input');
+    const batchBtn = document.getElementById('batch-btn');
+    const batchProgress = document.getElementById('batch-progress');
+    const batchResults = document.getElementById('batch-results');
+
+    function setMode(batch) {
+        form.classList.toggle('hidden', batch);
+        batchPanel.classList.toggle('hidden', !batch);
+        modeSingleBtn.style.backgroundColor = batch ? '' : '#84CC16';
+        modeSingleBtn.classList.toggle('bg-slate-800', batch);
+        modeSingleBtn.classList.toggle('text-slate-200', batch);
+        modeSingleBtn.classList.toggle('text-slate-950', !batch);
+        modeBatchBtn.style.backgroundColor = batch ? '#84CC16' : '';
+        modeBatchBtn.classList.toggle('bg-slate-800', !batch);
+        modeBatchBtn.classList.toggle('text-slate-200', !batch);
+        modeBatchBtn.classList.toggle('text-slate-950', batch);
+        if (batch) { resultCard.classList.add('hidden'); errorAlert.classList.add('hidden'); }
+    }
+    modeSingleBtn.addEventListener('click', () => setMode(false));
+    modeBatchBtn.addEventListener('click', () => setMode(true));
+
+    function extractLink(line) {
+        const m = line.match(/https?:\/\/[^\s"'<>]+/);
+        if (!m) return null;
+        return m[0].replace(/[).,]+$/, '');
+    }
+
+    function batchCardEl(link, index) {
+        const wrap = document.createElement('div');
+        wrap.className = 'w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl';
+        wrap.innerHTML =
+            '<p class="text-xs text-slate-500 mb-2 truncate">' + (index + 1) + '. ' + link.replace(/</g, '&lt;') + '</p>' +
+            '<div class="batch-body flex items-center gap-3">' +
+            '<div class="w-8 h-8 border-4 border-lime-400 border-t-transparent rounded-full animate-spin shrink-0"></div>' +
+            '<p class="text-sm text-slate-400">Mengambil data…</p></div>';
+        return wrap;
+    }
+
+    function batchResultHtml(data) {
+        const base = (data.platform === 'tiktok' ? 'tiktok-' : 'douyin-') + (data.aweme_id || 'file');
+        let btns = '';
+        if (data.video_url) btns += '<a href="' + proxy(data.video_url, base + '.mp4') + '" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition">Video (Tanpa Watermark)</a>';
+        if (data.video_url_watermark) btns += '<a href="' + proxy(data.video_url_watermark, base + '-watermark.mp4') + '" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition">Video (Watermark)</a>';
+        if (data.platform === 'tiktok' && data.music_url) {
+            btns += '<a href="' + proxy(data.music_url, base + '.mp3') + '" class="flex-1 font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition text-slate-950" style="background-color:#84CC16;">MP3</a>';
+        } else if (data.platform === 'douyin' && data.video_url) {
+            btns += '<a href="/mp3?url=' + encodeURIComponent(data.video_url) + '&name=' + encodeURIComponent(base + '.mp3') + '" class="flex-1 font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition text-slate-950" style="background-color:#84CC16;">MP3</a>';
+        }
+        let imgs = '';
+        if (data.images && data.images.length) {
+            imgs = '<div class="flex flex-wrap gap-2 mt-3">' + data.images.map(function (imgUrl, i) {
+                return '<a href="' + proxy(imgUrl, base + '-foto-' + (i + 1) + '.jpg') + '" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 py-1.5 px-3 rounded-full">Foto ' + (i + 1) + '</a>';
+            }).join('') + '</div>';
+        }
+        return '<div class="flex gap-3">' +
+            '<img src="' + (data.cover || '') + '" alt="" class="w-16 h-24 object-cover rounded-lg border border-slate-800 shrink-0">' +
+            '<div class="min-w-0 flex-1">' +
+            '<span class="text-xs font-mono bg-slate-800 text-lime-300 py-0.5 px-2 rounded-full">' + (data.platform === 'tiktok' ? 'TikTok' : 'Douyin') + '</span>' +
+            '<p class="font-bold text-slate-100 text-sm mt-1 line-clamp-2">' + (data.title || '').replace(/</g, '&lt;') + '</p>' +
+            '<p class="text-xs text-slate-400 mt-0.5">Kreator: ' + (data.author || '').replace(/</g, '&lt;') + '</p>' +
+            '</div></div>' +
+            '<div class="flex flex-wrap gap-2 mt-3">' + btns + '</div>' + imgs;
+    }
+
+    batchBtn.addEventListener('click', async () => {
+        const seen = new Set();
+        const links = [];
+        batchInput.value.split('\n').forEach(function (line) {
+            const link = extractLink(line.trim());
+            if (link && !seen.has(link)) { seen.add(link); links.push(link); }
+        });
+        if (!links.length) {
+            batchProgress.textContent = 'Tempel minimal 1 link dulu.';
+            batchProgress.classList.remove('hidden');
+            return;
+        }
+        const useLinks = links.slice(0, MAX_BATCH);
+        batchResults.innerHTML = '';
+        batchBtn.disabled = true;
+        batchBtn.style.opacity = '0.6';
+        batchProgress.classList.remove('hidden');
+        let ok = 0, fail = 0;
+
+        for (let i = 0; i < useLinks.length; i++) {
+            batchProgress.textContent = 'Memproses ' + (i + 1) + '/' + useLinks.length + '…';
+            const card = batchCardEl(useLinks[i], i);
+            batchResults.appendChild(card);
+            const body = card.querySelector('.batch-body');
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: useLinks[i] })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Gagal memproses link.');
+                if (!data.success) throw new Error('Respons server tidak valid.');
+                body.outerHTML = batchResultHtml(data);
+                ok++;
+            } catch (err) {
+                body.innerHTML = '<p class="text-sm text-red-300">Gagal: ' + err.message.replace(/</g, '&lt;') + '</p>';
+                fail++;
+            }
+            if (i < useLinks.length - 1) await new Promise(r => setTimeout(r, 800));
+        }
+
+        let summary = 'Selesai: ' + ok + ' berhasil, ' + fail + ' gagal.';
+        if (links.length > MAX_BATCH) summary += ' Hanya ' + MAX_BATCH + ' link pertama yang diproses (maks per batch).';
+        batchProgress.textContent = summary;
+        batchBtn.disabled = false;
+        batchBtn.style.opacity = '1';
     });
 </script>
