@@ -336,12 +336,22 @@ def _ytdlp_opts(platform: str) -> dict:
         "compat_opts": {"no-certifi"},
     }
     if platform == "youtube":
-        # Client Android/iOS/TV terbukti menembus bot-check + eksperimen
-        # SABR-only YouTube (terverifikasi 8 Nov 2026: format 18 jalan).
-        opts["extractor_args"] = {"youtube": {"player_client": ["android", "ios", "tv"]}}
-    return opts
-
-
+          # Client Android + Android VR terbukti mengembalikan format 18
+      # (video+audio 360p) dari IP bersih — terverifikasi 8 Nov 2026
+      # dengan yt-dlp 2026.10.26, TANPA PO token dan TANPA JS runtime.
+      # JANGAN pakai tv_downgraded/web_embedded: tv_downgraded kena
+      # bot-check, web_embedded hanya mengembalikan storyboard (tanpa
+      # format video/audio). ios/tv/web/web_safari/tv_samsung juga
+      # kena bot-check dari IP ini. (android_vr di tabel policy yt-dlp
+      # memang “GVS PO token required”, tapi enforcement-nya selektif
+      # — dari IP bersih ia jalan tanpa token, sama seperti android.)
+      # Paksa IPv4 (setara CLI -4; di API Python tidak ada param
+      # force_ipv4 — caranya source_address "0.0.0.0", terverifikasi
+      # di yt_dlp/options.py + YoutubeDL.py:441): egress IPv6 Render
+      # bisa satu blok /64 yang di-flag YouTube.
+      opts["source_address"] = "0.0.0.0"
+      opts["extractor_args"] = {"youtube": {"player_client": ["android", "android_vr"]}}
+      
 def _pick_combined_video(formats: list) -> dict | None:
     """Pilih format video gabungan (ada audio).
     Tingkat 1: format dengan vcodec+acodec eksplisit (YouTube 22/18).
