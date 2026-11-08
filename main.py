@@ -1,5 +1,5 @@
 """
-DigitCuan Downloader — TikTok & Douyin Downloader (v2).
+DigitCuan Downloader — TikTok, Douyin, YouTube, Instagram & Facebook (v3).
 
 Fitur:
 - TikTok: video tanpa watermark, video watermark, MP3, foto slideshow.
@@ -8,9 +8,15 @@ Fitur:
   v1), foto slideshow (postingan /note/), MP3 diekstrak dari video pakai
   ffmpeg (imageio-ffmpeg) karena data share Douyin tidak menyediakan
   tautan audio terpisah.
+- YouTube, Instagram, Facebook: resolver via yt-dlp (tanpa login, konten
+  publik saja). Video MP4 gabungan (YouTube: 720p bila tersedia, kalau tidak
+  360p) + MP3 (audio-only bila ada, kalau tidak diekstrak dari video via
+  ffmpeg). Catatan jujur: YouTube/Instagram kadang membatasi akses tanpa
+  login (429 / SABR / API tidak memberi akses) — saat itu server mengembalikan
+  pesan gagal yang jelas, bukan file kosong.
 
 Unduhan file dialirkan lewat /download (proxy) agar browser menyimpan
-sebagai file. MP3 Douyin lewat /mp3 (ekstraksi server-side, batas 70 MB).
+sebagai file. MP3 lewat /mp3 (ekstraksi server-side, batas sumber 70 MB).
 """
 import os
 
@@ -38,7 +44,7 @@ from starlette.background import BackgroundTask
 
 BASE_DIR = Path(__file__).resolve().parent
 
-app = FastAPI(title="DigitCuan Downloader — TikTok & Douyin Tanpa Watermark", version="2.0.0")
+app = FastAPI(title="DigitCuan Downloader — TikTok, Douyin, YouTube, Instagram & Facebook", version="3.0.0")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -62,6 +68,10 @@ DOWNLOAD_HOST_SUFFIXES = (
     "douyinpic.com", "ibyteimg.com", "bytedance.com",
     # TikTok
     "tiktokcdn.com", "tiktokcdn-us.com", "tiktok.com", "musical.ly",
+    # YouTube (yt-dlp)
+    "googlevideo.com",
+    # Instagram / Facebook (yt-dlp)
+    "fbcdn.net", "cdninstagram.com",
 )
 
 MAX_MP3_SOURCE_BYTES = 70 * 1024 * 1024  # 70 MB — batas sumber ekstraksi MP3
@@ -116,6 +126,12 @@ def detect_platform(url: str) -> str | None:
         return "douyin"
     if "tiktok" in host:
         return "tiktok"
+    if "youtube" in host or "youtu.be" in host:
+        return "youtube"
+    if "instagram" in host or "instagr.am" in host:
+        return "instagram"
+    if "facebook" in host or "fb.watch" in host or host == "fb.com":
+        return "facebook"
     return None
 
 
@@ -303,6 +319,172 @@ async def extract_tiktok(raw_input: str) -> dict:
     }
 
 
+# ------------------------------------------------- yt-dlp (YT/IG/FB) ----
+YTDLP_TIMEOUT = 90.0  # detik — ekstraksi IG kadang lambat
+
+
+def _ytdlp_opts(platform: str) -> dict:
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "socket_timeout": 30,
+        # Pakai CA sistem, bukan bundle certifi — agar jalan di lingkungan
+        # yang memakai CA egress sendiri (sandbox ini), tanpa mematikan
+        # verifikasi TLS. Di Render ini = CA sistem normal.
+        # (yt-dlp: prefer_system_certs hanya aktif lewat compat_opt 'no-certifi'.)
+        "compat_opts": {"no-certifi"},
+    }
+    if platform == "youtube":
+        # Client Android/iOS/TV terbukti menembus bot-check + eksperimen
+        # SABR-only YouTube (terverifikasi 8 Nov 2026: format 18 jalan).
+        opts["extractor_args"] = {"youtube": {"player_client": ["android", "ios", "tv"]}}
+    return opts
+
+
+def _pick_combined_video(formats: list) -> dict | None:
+    """Pilih format video gabungan (ada audio).
+    Tingkat 1: format dengan vcodec+acodec eksplisit (YouTube 22/18).
+    Tingkat 2: format progresif IG/FB (vcodec/acodec None, ext mp4) — ini
+    URL MP4 langsung dari API platform, audio sudah menyatu.
+    """
+    cands = [
+        f for f in formats
+        if f.get("vcodec") not in (None, "none")
+        and f.get("acodec") not in (None, "none")
+        and f.get("url")
+    ]
+
+    def score(f):
+        fid = str(f.get("format_id") or "")
+        h = f.get("height") or 0
+        if fid == "22":
+            return (3, h)
+        if fid == "18":
+            return (2, h)
+        if f.get("ext") == "mp4" and h <= 720:
+            return (1, h)
+        return (0, h)
+
+    cands.sort(key=score, reverse=True)
+    if cands:
+        return cands[0]
+
+    prog = [
+        f for f in formats
+        if f.get("vcodec") in (None, "none")
+        and f.get("acodec") in (None, "none")
+        and f.get("ext") == "mp4"
+        and f.get("url")
+    ]
+    if not prog:
+        return None
+
+    def prog_score(f):
+        fid = str(f.get("format_id") or "")
+        return {"hd": 3, "3": 2, "2": 1, "sd": 0}.get(fid, 0)
+
+    prog.sort(key=prog_score, reverse=True)
+    return prog[0]
+
+
+def _pick_audio_only(formats: list) -> dict | None:
+    """Pilih format audio-only — utamakan 140 (m4a AAC)."""
+    cands = [
+        f for f in formats
+        if f.get("vcodec") in (None, "none")
+        and f.get("acodec") not in (None, "none")
+        and f.get("url")
+    ]
+
+    def score(f):
+        fid = str(f.get("format_id") or "")
+        if fid == "140":
+            return 3
+        if f.get("ext") == "m4a":
+            return 2
+        return 1
+
+    cands.sort(key=score, reverse=True)
+    return cands[0] if cands else None
+
+
+def _ytdlp_extract(url: str, platform: str) -> dict:
+    """Ekstraksi sinkron (dijalankan di thread) — mengembalikan dict hasil standar."""
+    from yt_dlp import YoutubeDL
+
+    with YoutubeDL(_ytdlp_opts(platform)) as ydl:
+        info = ydl.extract_info(url, download=False)
+    if not info:
+        raise HTTPException(status_code=502, detail="Platform tidak memberikan data untuk link ini.")
+    if info.get("_type") == "playlist":
+        entries = [e for e in (info.get("entries") or []) if e]
+        if not entries:
+            raise HTTPException(status_code=400, detail="Tidak ada video di link ini.")
+        info = entries[0]
+
+    formats = info.get("formats") or []
+    video = _pick_combined_video(formats)
+    audio = _pick_audio_only(formats)
+    ext = (info.get("ext") or "").lower()
+
+    images: list = []
+    is_image = False
+    if not video and not audio and ext in ("jpg", "jpeg", "png", "webp") and info.get("url"):
+        images = [info["url"]]
+        is_image = True
+
+    if not video and not audio and not is_image:
+        raise HTTPException(
+            status_code=502,
+            detail="Tidak ditemukan file video/audio untuk link ini (mungkin konten privat/dihapus, atau platform sedang membatasi akses tanpa login).",
+        )
+
+    return {
+        "success": True,
+        "platform": platform,
+        "type": "image" if is_image else "video",
+        "title": info.get("title") or f"Video {platform.capitalize()}",
+        "author": info.get("uploader") or info.get("uploader_id") or info.get("channel") or "Unknown Author",
+        "avatar": "",
+        "cover": info.get("thumbnail") or "",
+        "video_url": (video or {}).get("url") or "",
+        "video_url_watermark": "",
+        "music_url": (audio or {}).get("url") or "",
+        "music_title": info.get("title") or "",
+        "images": images,
+        "aweme_id": str(info.get("id") or ""),
+        "duration_ms": int((info.get("duration") or 0) * 1000),
+    }
+
+
+async def extract_ytdlp(raw_input: str, platform: str) -> dict:
+    share_url = extract_url(raw_input)
+    if not share_url:
+        raise HTTPException(status_code=400, detail="Tidak ada URL di teks yang ditempel.")
+    host = urlparse(share_url).netloc.lower()
+    need = {
+        "youtube": ("youtube", "youtu.be"),
+        "instagram": ("instagram", "instagr.am"),
+        "facebook": ("facebook", "fb.watch", "fb.com"),
+    }[platform]
+    if not any(n in host for n in need):
+        raise HTTPException(status_code=400, detail=f"URL ini sepertinya bukan link {platform.capitalize()}.")
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(_ytdlp_extract, share_url, platform), timeout=YTDLP_TIMEOUT
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=502, detail=f"{platform.capitalize()} lambat merespons. Coba lagi sebentar.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gagal mengambil data dari {platform.capitalize()} (mungkin konten privat/dihapus, atau platform sedang membatasi akses tanpa login).",
+        )
+
+
 # ----------------------------------------------------------------- pages ----
 def page_ctx(request: Request, **kw):
     ctx = {"request": request, "site_url": SITE_URL}
@@ -323,6 +505,21 @@ async def tiktok_page(request: Request):
 @app.get("/douyin-downloader", response_class=HTMLResponse)
 async def douyin_page(request: Request):
     return templates.TemplateResponse(request, "tool.html", page_ctx(request, tool="douyin"))
+
+
+@app.get("/youtube-downloader", response_class=HTMLResponse)
+async def youtube_page(request: Request):
+    return templates.TemplateResponse(request, "tool.html", page_ctx(request, tool="youtube"))
+
+
+@app.get("/instagram-downloader", response_class=HTMLResponse)
+async def instagram_page(request: Request):
+    return templates.TemplateResponse(request, "tool.html", page_ctx(request, tool="instagram"))
+
+
+@app.get("/facebook-downloader", response_class=HTMLResponse)
+async def facebook_page(request: Request):
+    return templates.TemplateResponse(request, "tool.html", page_ctx(request, tool="facebook"))
 
 
 @app.get("/cara-penggunaan", response_class=HTMLResponse)
@@ -347,7 +544,9 @@ async def robots():
 
 @app.get("/sitemap.xml")
 async def sitemap():
-    paths = ["/", "/tiktok-downloader", "/douyin-downloader", "/cara-penggunaan", "/faq", "/kontak"]
+    paths = ["/", "/tiktok-downloader", "/douyin-downloader", "/youtube-downloader",
+             "/instagram-downloader", "/facebook-downloader",
+             "/cara-penggunaan", "/faq", "/kontak"]
     urls = "".join(f"<url><loc>{SITE_URL}{p}</loc></url>" for p in paths)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
     return HTMLResponse(content=xml, media_type="application/xml")
@@ -369,14 +568,16 @@ async def api_download(payload: URLRequest):
         raise HTTPException(status_code=400, detail="URL tidak boleh kosong.")
     url = extract_url(payload.url)
     if not url:
-        raise HTTPException(status_code=400, detail="Tidak ada URL di teks yang ditempel. Tempel link TikTok atau Douyin.")
+        raise HTTPException(status_code=400, detail="Tidak ada URL di teks yang ditempel. Tempel link TikTok, Douyin, YouTube, Instagram, atau Facebook.")
     platform = detect_platform(url)
     if platform == "tiktok":
         result = await extract_tiktok(payload.url)
     elif platform == "douyin":
         result = await extract_douyin(payload.url)
+    elif platform in ("youtube", "instagram", "facebook"):
+        result = await extract_ytdlp(payload.url, platform)
     else:
-        raise HTTPException(status_code=400, detail="Link tidak dikenali. Tool ini mendukung TikTok dan Douyin.")
+        raise HTTPException(status_code=400, detail="Link tidak dikenali. Tool ini mendukung TikTok, Douyin, YouTube, Instagram, dan Facebook.")
     return JSONResponse(result)
 
 
@@ -387,12 +588,24 @@ def _check_host(url: str) -> str:
     return host
 
 
+def _referer_for_host(host: str) -> str:
+    if "googlevideo" in host:
+        return "https://www.youtube.com/"
+    if "cdninstagram" in host:
+        return "https://www.instagram.com/"
+    if "fbcdn" in host:
+        return "https://www.facebook.com/"
+    if "tiktok" in host:
+        return "https://www.tiktok.com/"
+    return "https://www.douyin.com/"
+
+
 @app.get("/download")
 async def download_proxy(url: str, name: str = "video.mp4"):
     """Stream file lewat server agar browser menyimpan sebagai unduhan."""
     host = _check_host(url)
     safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:80] or "video.mp4"
-    referer = "https://www.tiktok.com/" if "tiktok" in host else "https://www.douyin.com/"
+    referer = _referer_for_host(host)
     client = httpx.AsyncClient(follow_redirects=True, timeout=DOWNLOAD_TIMEOUT)
     try:
         req = client.build_request("GET", url, headers={"User-Agent": UA_MOBILE, "Referer": referer})
@@ -433,14 +646,15 @@ def _ffmpeg_exe() -> str | None:
 
 @app.get("/mp3")
 async def mp3_extract(url: str, name: str = "douyin-audio.mp3"):
-    """Ekstrak audio MP3 dari video Douyin (audio terpisah tidak disediakan Douyin)."""
-    _check_host(url)
+    """Ekstrak audio MP3 dari video (Douyin/YouTube/Instagram/Facebook)."""
+    host = _check_host(url)
     ff = _ffmpeg_exe()
     if not ff:
         raise HTTPException(status_code=501, detail="Fitur MP3 belum tersedia di server.")
     safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:80] or "douyin-audio.mp3"
     if not safe_name.endswith(".mp3"):
         safe_name += ".mp3"
+    referer = _referer_for_host(host)
 
     tmpdir = tempfile.mkdtemp(prefix="dc-mp3-")
     src = os.path.join(tmpdir, "src.mp4")
@@ -457,7 +671,7 @@ async def mp3_extract(url: str, name: str = "douyin-audio.mp3"):
 
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=DOWNLOAD_TIMEOUT) as client:
-            async with client.stream("GET", url, headers={"User-Agent": UA_MOBILE, "Referer": "https://www.douyin.com/"}) as resp:
+            async with client.stream("GET", url, headers={"User-Agent": UA_MOBILE, "Referer": referer}) as resp:
                 if resp.status_code != 200:
                     raise HTTPException(status_code=502, detail="Gagal mengambil video untuk diekstrak audionya.")
                 total = 0
@@ -472,7 +686,7 @@ async def mp3_extract(url: str, name: str = "douyin-audio.mp3"):
         raise
     except httpx.HTTPError:
         cleanup()
-        raise HTTPException(status_code=502, detail="Gagal mengambil video dari Douyin.")
+        raise HTTPException(status_code=502, detail="Gagal mengambil video dari sumber.")
 
     def run_ffmpeg():
         return subprocess.run(
