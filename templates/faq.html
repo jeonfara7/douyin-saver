@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}FAQ — Pertanyaan Seputar TikTok & Douyin Downloader{% endblock %}
-{% block description %}Jawaban pertanyaan umum DigitCuan Downloader: gratis atau tidak, kualitas video, MP3 Douyin, postingan privat, dan batasan tool.{% endblock %}
+{% block title %}FAQ — Pertanyaan Seputar DigitCuan Downloader (TikTok, Douyin, YouTube, Instagram, Facebook){% endblock %}
+{% block description %}Jawaban pertanyaan umum DigitCuan Downloader: gratis atau tidak, kualitas video, MP3, postingan privat, dan batasan tool.{% endblock %}
 {% block canonical %}/faq{% endblock %}
 {% block head_extra %}
 <script type="application/ld+json">
@@ -9,6 +9,7 @@
 {"@type":"Question","name":"Apakah saya perlu install aplikasi?","acceptedAnswer":{"@type":"Answer","text":"Tidak. Tool berjalan sepenuhnya di browser HP maupun laptop, tanpa memasang aplikasi atau ekstensi apa pun."}},
 {"@type":"Question","name":"Kenapa hasil unduhan tidak ada watermark-nya?","acceptedAnswer":{"@type":"Answer","text":"Tool mengambil file dari server sumber sebelum watermark ditempel oleh aplikasi, sehingga file yang kamu terima adalah versi bersih tanpa logo platform dan nama pengguna."}},
 {"@type":"Question","name":"Kenapa MP3 Douyin diproses lebih lama?","acceptedAnswer":{"@type":"Answer","text":"Douyin tidak menyediakan file audio terpisah, jadi audio diekstrak dari videonya di server kami. Ekstraksi tersedia untuk video hingga 70 MB."}},
+{"@type":"Question","name":"Kenapa link YouTube atau Instagram kadang gagal?","acceptedAnswer":{"@type":"Answer","text":"YouTube dan Instagram kadang membatasi akses unduhan dari server tanpa login. Kalau sebuah link gagal diproses, coba lagi beberapa saat kemudian."}},
 {"@type":"Question","name":"Bisakah mengunduh postingan privat?","acceptedAnswer":{"@type":"Answer","text":"Tidak. Tool hanya memproses konten publik. Postingan privat, terhapus, atau dibatasi wilayah tidak dapat diambil datanya."}}
 ]}
 </script>
@@ -42,15 +43,19 @@
             <p class="text-slate-400 mt-2">Tidak. Tool hanya memproses konten publik yang bisa diakses tanpa login. Story dan postingan privat memerlukan akses akun pemiliknya, jadi tidak didukung.</p>
         </details>
         <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <summary class="font-semibold cursor-pointer">Kenapa link YouTube atau Instagram kadang gagal?</summary>
+            <p class="text-slate-400 mt-2">YouTube dan Instagram kadang membatasi akses unduhan dari server tanpa login — misalnya muncul pesan "platform sedang membatasi akses". Kalau sebuah link gagal diproses, coba lagi beberapa saat kemudian; biasanya berhasil di percobaan berikutnya.</p>
+        </details>
+        <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <summary class="font-semibold cursor-pointer">Link apa saja yang didukung?</summary>
-            <p class="text-slate-400 mt-2">Link tiktok.com dan vt.tiktok.com dari TikTok, serta douyin.com dan v.douyin.com dari Douyin — termasuk seluruh teks bagikan yang disalin dari aplikasi.</p>
+            <p class="text-slate-400 mt-2">Link TikTok (tiktok.com, vt.tiktok.com), Douyin (douyin.com, v.douyin.com), YouTube (youtube.com, youtu.be), Instagram (instagram.com, instagr.am), dan Facebook (facebook.com, fb.watch) — termasuk seluruh teks bagikan yang disalin dari aplikasi.</p>
         </details>
         <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <summary class="font-semibold cursor-pointer">Apakah unduhan saya disimpan di server?</summary>
-            <p class="text-slate-400 mt-2">Tidak. File dialirkan langsung dari server sumber ke perangkatmu. Khusus MP3 Douyin, video diproses sementara di server untuk ekstraksi audio lalu dihapus begitu unduhan selesai.</p>
+            <p class="text-slate-400 mt-2">Tidak. File dialirkan langsung dari server sumber ke perangkatmu. Khusus MP3, video/audio diproses sementara di server untuk ekstraksi lalu dihapus begitu unduhan selesai.</p>
         </details>
         <details class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <summary class="font-semibold cursor-pointer">Apakah legal mengunduh video TikTok/Douyin?</summary>
+            <summary class="font-semibold cursor-pointer">Apakah legal mengunduh video dari tool ini?</summary>
             <p class="text-slate-400 mt-2">Mengunduh untuk keperluan pribadi umumnya diperbolehkan, tetapi hak cipta tetap milik kreatornya. Jangan mengunggah ulang atau memakai konten orang lain untuk tujuan komersial tanpa izin.</p>
         </details>
     </div>

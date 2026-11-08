@@ -21,7 +21,7 @@
             <span>Unduh</span>
         </button>
     </form>
-    <p class="text-xs text-slate-500 mt-3">Mendukung link tiktok.com, vt.tiktok.com, douyin.com, dan v.douyin.com — termasuk teks bagikan yang disalin dari aplikasi.</p>
+    <p class="text-xs text-slate-500 mt-3">Mendukung link TikTok, Douyin, YouTube, Instagram, dan Facebook — termasuk teks bagikan yang disalin dari aplikasi.</p>
 
     <!-- Panel mode batch: tempel banyak link, diproses satu per satu -->
     <div id="batch-panel" class="hidden mt-4">
@@ -84,7 +84,7 @@
                 <a id="btn-video-wm" href="#" class="hidden flex-grow bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-5 rounded-xl text-center transition duration-200 shadow-md">Download Video (Watermark)</a>
                 <a id="btn-mp3" href="#" class="hidden flex-grow font-semibold py-3 px-5 rounded-xl text-center transition duration-200 shadow-md text-slate-950" style="background-color:#84CC16;">Download MP3</a>
             </div>
-            <p id="mp3-note" class="hidden text-xs text-slate-500">MP3 Douyin diekstrak dari audio videonya — prosesnya butuh beberapa detik lebih lama.</p>
+            <p id="mp3-note" class="hidden text-xs text-slate-500">MP3 diekstrak dari audio/video di server — prosesnya butuh beberapa detik lebih lama.</p>
         </div>
     </div>
     <div id="result-images" class="hidden mt-6">
@@ -94,6 +94,20 @@
 </div>
 
 <script>
+    const PLATFORM_NAMES = { tiktok: 'TikTok', douyin: 'Douyin', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook' };
+    function platformName(p) { return PLATFORM_NAMES[p] || p; }
+    function baseName(data) { return (data.platform || 'file') + '-' + (data.aweme_id || 'file'); }
+    function mp3Href(data) {
+        const base = baseName(data);
+        if (data.platform === 'tiktok' && data.music_url) return proxy(data.music_url, base + '.mp3');
+        const src = data.music_url || data.video_url;
+        if (src) return '/mp3?url=' + encodeURIComponent(src) + '&name=' + encodeURIComponent(base + '.mp3');
+        return null;
+    }
+    function mp3NeedsExtract(data) {
+        return data.platform !== 'tiktok' && !!(data.music_url || data.video_url);
+    }
+
     const form = document.getElementById('download-form');
     const urlInput = document.getElementById('url-input');
     const loading = document.getElementById('loading');
@@ -117,7 +131,8 @@
         if (!url) return;
 
         loading.classList.remove('hidden');
-        loadingText.textContent = 'Mengambil data dari ' + (url.indexOf('tiktok') !== -1 ? 'TikTok' : 'Douyin') + '…';
+        const hostGuess = url.indexOf('tiktok') !== -1 ? 'TikTok' : url.indexOf('douyin') !== -1 ? 'Douyin' : url.indexOf('youtu') !== -1 ? 'YouTube' : url.indexOf('instagram') !== -1 || url.indexOf('instagr.am') !== -1 ? 'Instagram' : url.indexOf('facebook') !== -1 || url.indexOf('fb.watch') !== -1 ? 'Facebook' : 'platform';
+        loadingText.textContent = 'Mengambil data dari ' + hostGuess + '…';
         errorAlert.classList.add('hidden');
         resultCard.classList.add('hidden');
 
@@ -132,7 +147,7 @@
             if (!response.ok) throw new Error(data.detail || 'Gagal memproses link.');
             if (!data.success) throw new Error('Respons server tidak valid.');
 
-            document.getElementById('result-platform').textContent = data.platform === 'tiktok' ? 'TikTok' : 'Douyin';
+            document.getElementById('result-platform').textContent = platformName(data.platform);
             document.getElementById('result-title').textContent = data.title || '';
             document.getElementById('result-author').textContent = data.author || '';
             document.getElementById('result-cover').src = data.cover || 'https://via.placeholder.com/300x500?text=No+Cover';
@@ -145,21 +160,14 @@
                 musicRow.classList.add('hidden');
             }
 
-            const base = (data.platform === 'tiktok' ? 'tiktok-' : 'douyin-') + (data.aweme_id || 'file');
+            const base = baseName(data);
             showBtn('btn-video', data.video_url ? proxy(data.video_url, base + '.mp4') : null);
             showBtn('btn-video-wm', data.video_url_watermark ? proxy(data.video_url_watermark, base + '-watermark.mp4') : null);
 
             const mp3Note = document.getElementById('mp3-note');
-            if (data.platform === 'tiktok' && data.music_url) {
-                showBtn('btn-mp3', proxy(data.music_url, base + '.mp3'));
-                mp3Note.classList.add('hidden');
-            } else if (data.platform === 'douyin' && data.video_url) {
-                showBtn('btn-mp3', '/mp3?url=' + encodeURIComponent(data.video_url) + '&name=' + encodeURIComponent(base + '.mp3'));
-                mp3Note.classList.remove('hidden');
-            } else {
-                showBtn('btn-mp3', null);
-                mp3Note.classList.add('hidden');
-            }
+            showBtn('btn-mp3', mp3Href(data));
+            if (mp3NeedsExtract(data)) mp3Note.classList.remove('hidden');
+            else mp3Note.classList.add('hidden');
 
             const imagesWrap = document.getElementById('result-images');
             const grid = document.getElementById('images-grid');
@@ -235,15 +243,12 @@
     }
 
     function batchResultHtml(data) {
-        const base = (data.platform === 'tiktok' ? 'tiktok-' : 'douyin-') + (data.aweme_id || 'file');
+        const base = baseName(data);
         let btns = '';
         if (data.video_url) btns += '<a href="' + proxy(data.video_url, base + '.mp4') + '" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition">Video (Tanpa Watermark)</a>';
         if (data.video_url_watermark) btns += '<a href="' + proxy(data.video_url_watermark, base + '-watermark.mp4') + '" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition">Video (Watermark)</a>';
-        if (data.platform === 'tiktok' && data.music_url) {
-            btns += '<a href="' + proxy(data.music_url, base + '.mp3') + '" class="flex-1 font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition text-slate-950" style="background-color:#84CC16;">MP3</a>';
-        } else if (data.platform === 'douyin' && data.video_url) {
-            btns += '<a href="/mp3?url=' + encodeURIComponent(data.video_url) + '&name=' + encodeURIComponent(base + '.mp3') + '" class="flex-1 font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition text-slate-950" style="background-color:#84CC16;">MP3</a>';
-        }
+        const mp3 = mp3Href(data);
+        if (mp3) btns += '<a href="' + mp3 + '" class="flex-1 font-semibold py-2.5 px-4 rounded-xl text-center text-sm transition text-slate-950" style="background-color:#84CC16;">MP3</a>';
         let imgs = '';
         if (data.images && data.images.length) {
             imgs = '<div class="flex flex-wrap gap-2 mt-3">' + data.images.map(function (imgUrl, i) {
@@ -253,7 +258,7 @@
         return '<div class="flex gap-3">' +
             '<img src="' + (data.cover || '') + '" alt="" class="w-16 h-24 object-cover rounded-lg border border-slate-800 shrink-0">' +
             '<div class="min-w-0 flex-1">' +
-            '<span class="text-xs font-mono bg-slate-800 text-lime-300 py-0.5 px-2 rounded-full">' + (data.platform === 'tiktok' ? 'TikTok' : 'Douyin') + '</span>' +
+            '<span class="text-xs font-mono bg-slate-800 text-lime-300 py-0.5 px-2 rounded-full">' + platformName(data.platform) + '</span>' +
             '<p class="font-bold text-slate-100 text-sm mt-1 line-clamp-2">' + (data.title || '').replace(/</g, '&lt;') + '</p>' +
             '<p class="text-xs text-slate-400 mt-0.5">Kreator: ' + (data.author || '').replace(/</g, '&lt;') + '</p>' +
             '</div></div>' +

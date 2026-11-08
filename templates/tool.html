@@ -2,10 +2,27 @@
 {% set page_title = 'Download Video TikTok Tanpa Watermark HD + MP3' %}
 {% set page_desc = 'Download video TikTok tanpa watermark kualitas HD dan simpan MP3 musiknya. Gratis, tanpa daftar, tanpa install aplikasi.' %}
 {% set page_path = '/tiktok-downloader' %}
+{% set tool_name = 'TikTok' %}
+{% elif tool == 'youtube' %}
+{% set page_title = 'Download Video YouTube MP4 + MP3 Gratis' %}
+{% set page_desc = 'Download video YouTube sebagai MP4 (720p bila tersedia) dan simpan audionya sebagai MP3. Gratis, tanpa daftar, tanpa install aplikasi.' %}
+{% set page_path = '/youtube-downloader' %}
+{% set tool_name = 'YouTube' %}
+{% elif tool == 'instagram' %}
+{% set page_title = 'Download Reels & Video Instagram MP4 + MP3 Gratis' %}
+{% set page_desc = 'Download Reels dan video Instagram sebagai MP4 dan simpan audionya sebagai MP3. Gratis, tanpa daftar, tanpa install aplikasi.' %}
+{% set page_path = '/instagram-downloader' %}
+{% set tool_name = 'Instagram' %}
+{% elif tool == 'facebook' %}
+{% set page_title = 'Download Video Facebook & Reels MP4 + MP3 Gratis' %}
+{% set page_desc = 'Download video Facebook, Watch, dan Reels sebagai MP4 dan simpan audionya sebagai MP3. Gratis, tanpa daftar, tanpa install aplikasi.' %}
+{% set page_path = '/facebook-downloader' %}
+{% set tool_name = 'Facebook' %}
 {% else %}
 {% set page_title = 'Download Video Douyin Tanpa Watermark + MP3' %}
 {% set page_desc = 'Download video Douyin tanpa watermark dan ekstrak audio MP3-nya. Gratis, tanpa daftar, tanpa install aplikasi.' %}
 {% set page_path = '/douyin-downloader' %}
+{% set tool_name = 'Douyin' %}
 {% endif %}
 {% extends "base.html" %}
 {% block title %}{{ page_title }}{% endblock %}
@@ -17,12 +34,21 @@
         {% if tool == 'tiktok' %}
         <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Video TikTok <span style="color:#84CC16;">Tanpa Watermark</span></h1>
         <p class="text-slate-400 text-lg">Simpan video TikTok sebagai MP4 bersih kualitas HD dan ambil musiknya sebagai MP3 — semua dari satu kolom.</p>
+        {% elif tool == 'youtube' %}
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Video YouTube <span style="color:#84CC16;">MP4 & MP3</span></h1>
+        <p class="text-slate-400 text-lg">Simpan video YouTube sebagai MP4 dan ambil audionya sebagai MP3 — semua dari satu kolom, tanpa install aplikasi.</p>
+        {% elif tool == 'instagram' %}
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Reels Instagram <span style="color:#84CC16;">MP4 & MP3</span></h1>
+        <p class="text-slate-400 text-lg">Simpan Reels dan video Instagram sebagai MP4 bersih dan ambil audionya sebagai MP3 — semua dari satu kolom.</p>
+        {% elif tool == 'facebook' %}
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Video Facebook <span style="color:#84CC16;">MP4 & MP3</span></h1>
+        <p class="text-slate-400 text-lg">Simpan video Facebook, Watch, dan Reels sebagai MP4 dan ambil audionya sebagai MP3 — semua dari satu kolom.</p>
         {% else %}
         <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">Download Video Douyin <span style="color:#84CC16;">Tanpa Watermark</span></h1>
         <p class="text-slate-400 text-lg">Simpan video Douyin (TikTok versi Tiongkok) sebagai MP4 bersih dan ekstrak audionya jadi MP3.</p>
         {% endif %}
     </div>
-    {% with placeholder = 'Tempel link ' + ('TikTok' if tool == 'tiktok' else 'Douyin') + ' di sini…' %}{% include "_downloader.html" %}{% endwith %}
+    {% with placeholder = 'Tempel link ' + tool_name + ' di sini…' %}{% include "_downloader.html" %}{% endwith %}
 </section>
 
 <section class="max-w-3xl mx-auto px-4 py-10 w-full">
@@ -32,14 +58,35 @@
     <p class="text-slate-300 mb-4">Tersedia juga opsi video versi watermark bila kamu membutuhkannya untuk keperluan atribusi.</p>
     <h3 class="text-xl font-bold mb-3">Buat Apa Video TikTok Tanpa Watermark?</h3>
     <p class="text-slate-300 mb-4">Kreator memakainya untuk riset format dan hook, editor untuk bahan referensi, dan pengguna biasa untuk koleksi pribadi yang bisa ditonton offline atau dibagikan ke WhatsApp tanpa logo yang menutupi layar. Ingat, hak cipta tetap milik kreator — pakai hasil unduhan untuk keperluan pribadi dan riset, dan minta izin sebelum memakai ulang untuk tujuan komersial.</p>
-    <p class="text-slate-300">Mau unduh dari Douyin juga? Buka <a href="/douyin-downloader" class="underline" style="color:#84CC16;">Douyin Downloader</a> — atau cukup tempel link Douyin di kolom yang sama, sistem mengenalinya otomatis.</p>
+    <p class="text-slate-300">Mau unduh dari platform lain juga? Buka <a href="/douyin-downloader" class="underline" style="color:#84CC16;">Douyin Downloader</a>, <a href="/youtube-downloader" class="underline" style="color:#84CC16;">YouTube Downloader</a>, <a href="/instagram-downloader" class="underline" style="color:#84CC16;">Instagram Downloader</a>, atau <a href="/facebook-downloader" class="underline" style="color:#84CC16;">Facebook Downloader</a> — atau cukup tempel link-nya di kolom yang sama, sistem mengenalinya otomatis.</p>
+    {% elif tool == 'youtube' %}
+    <h2 class="text-2xl font-extrabold mb-4">Pengunduh YouTube: Video MP4 & MP3</h2>
+    <p class="text-slate-300 mb-4">Tempel link video YouTube mana pun — dari youtube.com, youtu.be, maupun YouTube Music — dan tool ini mengambil videonya sebagai MP4 (720p bila tersedia, kalau tidak 360p) plus audionya sebagai MP3. Cocok untuk menyimpan ceramah, lagu, atau tutorial buat ditonton offline.</p>
+    <p class="text-slate-300 mb-4">Catatan jujur: YouTube kadang membatasi akses unduhan dari server tanpa login. Kalau sebuah link gagal diproses, coba lagi beberapa saat kemudian — biasanya berhasil di percobaan berikutnya. Tool ini hanya memproses konten publik; video privat, terhapus, atau dibatasi usia tidak bisa diambil.</p>
+    <h3 class="text-xl font-bold mb-3">Video atau MP3 Saja?</h3>
+    <p class="text-slate-300 mb-4">Pilih Download Video kalau kamu butuh gambarnya, pilih Download MP3 kalau cuma butuh suaranya — misalnya buat didengar di perjalanan tanpa menghabiskan kuota video. Ingat, hak cipta tetap milik kreator — pakai hasil unduhan untuk keperluan pribadi dan riset, dan minta izin sebelum memakai ulang untuk tujuan komersial.</p>
+    <p class="text-slate-300">Mau unduh dari platform lain juga? Buka <a href="/tiktok-downloader" class="underline" style="color:#84CC16;">TikTok Downloader</a>, <a href="/douyin-downloader" class="underline" style="color:#84CC16;">Douyin Downloader</a>, <a href="/instagram-downloader" class="underline" style="color:#84CC16;">Instagram Downloader</a>, atau <a href="/facebook-downloader" class="underline" style="color:#84CC16;">Facebook Downloader</a> — atau cukup tempel link-nya di kolom yang sama, sistem mengenalinya otomatis.</p>
+    {% elif tool == 'instagram' %}
+    <h2 class="text-2xl font-extrabold mb-4">Pengunduh Instagram: Reels, Video & Foto</h2>
+    <p class="text-slate-300 mb-4">Tempel link Reels, video post, atau foto Instagram — dari instagram.com maupun instagr.am — dan tool ini mengambil medianya sebagai MP4 (untuk video/Reels) atau file gambar (untuk foto), plus audionya sebagai MP3 bila tersedia. Cocok buat menyimpan referensi editing, bahan riset konten, atau koleksi pribadi.</p>
+    <p class="text-slate-300 mb-4">Catatan jujur: Instagram cukup sering membatasi akses tanpa login, jadi sebagian link bisa gagal diproses padahal kontennya publik. Kalau gagal, coba lagi beberapa saat kemudian atau pakai link lain dari postingan yang sama. Tool ini hanya memproses konten publik; akun privat, Stories, dan Highlights tidak didukung.</p>
+    <h3 class="text-xl font-bold mb-3">Buat Apa Menyimpan Reels?</h3>
+    <p class="text-slate-300 mb-4">Kreator memakainya untuk mempelajari hook, transisi, dan tren audio yang sedang ramai, lalu membuat versi orisinalnya sendiri. Ingat, hak cipta tetap milik kreator — pakai hasil unduhan untuk keperluan pribadi dan riset, dan minta izin sebelum memakai ulang untuk tujuan komersial.</p>
+    <p class="text-slate-300">Mau unduh dari platform lain juga? Buka <a href="/tiktok-downloader" class="underline" style="color:#84CC16;">TikTok Downloader</a>, <a href="/douyin-downloader" class="underline" style="color:#84CC16;">Douyin Downloader</a>, <a href="/youtube-downloader" class="underline" style="color:#84CC16;">YouTube Downloader</a>, atau <a href="/facebook-downloader" class="underline" style="color:#84CC16;">Facebook Downloader</a> — atau cukup tempel link-nya di kolom yang sama, sistem mengenalinya otomatis.</p>
+    {% elif tool == 'facebook' %}
+    <h2 class="text-2xl font-extrabold mb-4">Pengunduh Facebook: Video, Watch & Reels</h2>
+    <p class="text-slate-300 mb-4">Tempel link video Facebook mana pun — Watch, Reels, video halaman, maupun fb.watch — dan tool ini mengambil videonya sebagai MP4 plus audionya sebagai MP3. Cocok buat menyimpan video ceramah, tutorial, atau klip viral buat ditonton offline.</p>
+    <p class="text-slate-300 mb-4">Tool ini hanya memproses konten publik. Video dari grup privat, postingan teman-saja, dan konten yang dihapus tidak bisa diambil. Ingat, hak cipta tetap milik kreator — pakai hasil unduhan untuk keperluan pribadi dan riset, dan minta izin sebelum memakai ulang untuk tujuan komersial.</p>
+    <h3 class="text-xl font-bold mb-3">Link Facebook yang Didukung</h3>
+    <p class="text-slate-300 mb-4">Semua bentuk link video Facebook yang umum: facebook.com/watch, facebook.com/reel, facebook.com/nama-halaman/videos, dan fb.watch. Kalau link yang kamu salin bentuknya share/v atau share/r, tool tetap mengenalinya selama videonya publik.</p>
+    <p class="text-slate-300">Mau unduh dari platform lain juga? Buka <a href="/tiktok-downloader" class="underline" style="color:#84CC16;">TikTok Downloader</a>, <a href="/douyin-downloader" class="underline" style="color:#84CC16;">Douyin Downloader</a>, <a href="/youtube-downloader" class="underline" style="color:#84CC16;">YouTube Downloader</a>, atau <a href="/instagram-downloader" class="underline" style="color:#84CC16;">Instagram Downloader</a> — atau cukup tempel link-nya di kolom yang sama, sistem mengenalinya otomatis.</p>
     {% else %}
     <h2 class="text-2xl font-extrabold mb-4">Pengunduh Douyin: Video & MP3</h2>
     <p class="text-slate-300 mb-4">Douyin adalah TikTok versi Tiongkok — rumah bagi banyak tren dan format video yang muncul lebih dulu sebelum ramai secara global. Tool ini mengambil file video langsung dari server Douyin dan menyajikan versi bersihnya tanpa watermark, tanpa perlu memasang aplikasi Douyin di HP kamu.</p>
     <p class="text-slate-300 mb-4">Berbeda dengan TikTok, Douyin tidak menyediakan file audio terpisah. Karena itu pilihan Download MP3 di sini bekerja dengan cara mengekstrak audio dari videonya di server kami — prosesnya butuh beberapa detik dan tersedia untuk video hingga 70 MB.</p>
     <h3 class="text-xl font-bold mb-3">Kenapa Kreator Indonesia Memantau Douyin?</h3>
     <p class="text-slate-300 mb-4">Format video, gaya transisi, dan tren audio sering lahir di Douyin lebih dulu. Menyimpan contohnya sebagai file lokal membuatmu bisa mempelajari polanya pelan-pelan — hook tiga detik pertama, struktur tutorial singkat, sampai cara kreator membungkus review produk — lalu membuat versi orisinalmu sendiri. Panduan memakai hasil riset seperti ini bisa kamu baca di <a href="https://digitcuan.site/riset-kompetitor-kreator/" class="underline" style="color:#84CC16;">artikel riset kompetitor DigitCuan</a>.</p>
-    <p class="text-slate-300">Mau unduh dari TikTok juga? Buka <a href="/tiktok-downloader" class="underline" style="color:#84CC16;">TikTok Downloader</a> — atau tempel link TikTok di kolom yang sama, sistem mengenalinya otomatis.</p>
+    <p class="text-slate-300">Mau unduh dari platform lain juga? Buka <a href="/tiktok-downloader" class="underline" style="color:#84CC16;">TikTok Downloader</a>, <a href="/youtube-downloader" class="underline" style="color:#84CC16;">YouTube Downloader</a>, <a href="/instagram-downloader" class="underline" style="color:#84CC16;">Instagram Downloader</a>, atau <a href="/facebook-downloader" class="underline" style="color:#84CC16;">Facebook Downloader</a> — atau cukup tempel link-nya di kolom yang sama, sistem mengenalinya otomatis.</p>
     {% endif %}
 </section>
 
