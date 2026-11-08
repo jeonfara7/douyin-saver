@@ -11,7 +11,9 @@ Fitur:
 - YouTube, Instagram, Facebook: resolver via yt-dlp (tanpa login, konten
   publik saja). Video MP4 gabungan (YouTube: 720p bila tersedia, kalau tidak
   360p) + MP3 (audio-only bila ada, kalau tidak diekstrak dari video via
-  ffmpeg). Catatan jujur: YouTube/Instagram kadang membatasi akses tanpa
+  ffmpeg). YouTube: bila tunnel WARP hidup, ekstraksi lewat SOCKS5
+  127.0.0.1:1080 (bootstrap wgcf+wireproxy otomatis saat start, fallback
+  direct bila gagal). Catatan jujur: YouTube/Instagram kadang membatasi akses tanpa
   login (429 / SABR / API tidak memberi akses) — saat itu server mengembalikan
   pesan gagal yang jelas, bukan file kosong.
 
@@ -28,9 +30,16 @@ os.environ["NO_PROXY"] = "localhost,127.0.0.1"
 import asyncio
 import json
 import re
+import socket
+import ssl
 import subprocess
+import tarfile
 import tempfile
+import threading
 import time
+import urllib.error
+import urllib.request
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
@@ -42,9 +51,350 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
+# ------------------------------------------------- WARP (Cloudflare) ----
+# YouTube dari Render diblokir karena IP datacenter di-flag (v3.1 client
+# android/android_vr + paksa IPv4 tetap 502). Solusi: egress YouTube lewat
+# Cloudflare WARP gratis — wgcf mendaftarkan identitas WARP gratis, lalu
+# wireproxy menjalankan tunnel WireGuard userspace (tanpa root) dan
+# mengeksposnya sebagai proxy lokal SOCKS5 127.0.0.1:1080 (+ HTTP 1081
+# sebagai cadangan/debug). HANYA YouTube yang memakai proxy; TikTok,
+# Douyin, IG, FB tidak berubah. Semua best-effort: bila bootstrap gagal
+# di langkah mana pun, aplikasi tetap jalan dan YouTube fallback ke direct
+# (perilaku lama, 502). Start command tetap `uvicorn main:app` — bootstrap
+# jalan dari dalam proses aplikasi (thread background, tidak memblokir
+# startup; Render filesystem ephemeral, jadi daftar tiap boot itu normal).
+# Wiring terverifikasi dari README resmi: wgcf `register --accept-tos` +
+# `generate [--keepalive]` (akun: wgcf-account.toml, profil:
+# wgcf-profile.conf); wireproxy `wireproxy -c <conf>` dengan [Socks5] /
+# [http] ditempel ke profil wgcf (README wireproxy, pufferffish/windtf).
+# Verifikasi tunnel: probe SOCKS5 end-to-end (CONNECT ke
+# www.cloudflare.com:443 + TLS + GET /cdn-cgi/trace, harus 'warp=on').
+
+WARP_DIR = Path(tempfile.gettempdir()) / "dc-warp"
+WARP_SOCKS_HOST = "127.0.0.1"
+WARP_SOCKS_PORT = 1080
+WARP_SOCKS_URL = f"socks5://{WARP_SOCKS_HOST}:{WARP_SOCKS_PORT}"
+WARP_HTTP_PORT = 1081
+WARP_GITHUB_API = "https://api.github.com/repos/{repo}/releases/latest"
+WGCF_FALLBACK_URL = "https://github.com/ViRb3/wgcf/releases/download/v2.3.1/wgcf_2.3.1_linux_amd64"
+WIREPROXY_FALLBACK_URL = "https://github.com/windtf/wireproxy/releases/download/v1.1.2/wireproxy_linux_amd64.tar.gz"
+
+_WARP = {
+    "up": False,          # True bila tunnel terverifikasi warp=on
+    "healthy": False,     # hasil cek port terakhir
+    "last_check": 0.0,    # monotonic detik cek terakhir
+    "proc": None,         # subprocess.Popen wireproxy
+    "started": False,     # guard agar bootstrap thread hanya sekali
+    "logged_use": False,  # log pemakaian proxy sekali per proses
+}
+
+
+def _warp_log(msg: str) -> None:
+    print(f"[warp] {msg}", flush=True)
+
+
+def _is_elf(path: Path) -> bool:
+    try:
+        with open(path, "rb") as fh:
+            return fh.read(4) == b"\x7fELF"
+    except OSError:
+        return False
+
+
+def _download_file(url: str, dest: Path, min_size: int, magic: bytes, timeout: int = 90) -> bool:
+    """Unduh URL ke dest; verifikasi ukuran + magic bytes (tolak halaman
+    error HTML — pelajaran insiden download Caddy corrupt)."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "DigitCuan-Downloader"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read()
+    except Exception as e:
+        _warp_log(f"download gagal {url}: {e}")
+        return False
+    if len(data) < min_size or not data.startswith(magic):
+        head = data[:120].decode("utf-8", "replace").replace("\n", " ")
+        _warp_log(f"download {url} tidak valid (ukuran {len(data)}, awal: {head!r})")
+        return False
+    dest.write_bytes(data)
+    os.chmod(dest, 0o755)
+    return True
+
+
+def _github_asset_url(repo: str, match) -> str | None:
+    """Resolve asset release terbaru via GitHub API (tanpa auth)."""
+    try:
+        req = urllib.request.Request(
+            WARP_GITHUB_API.format(repo=repo),
+            headers={"User-Agent": "DigitCuan-Downloader", "Accept": "application/vnd.github+json"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+        for asset in data.get("assets") or []:
+            name = asset.get("name") or ""
+            if match(name):
+                return asset.get("browser_download_url")
+    except Exception as e:
+        _warp_log(f"GitHub API {repo} gagal: {e}")
+    return None
+
+
+def _ensure_warp_binaries() -> tuple[Path, Path] | None:
+    """Pastikan biner wgcf + wireproxy ada & valid (ELF). Unduh bila perlu."""
+    WARP_DIR.mkdir(parents=True, exist_ok=True)
+    wgcf_bin = WARP_DIR / "wgcf"
+    wire_bin = WARP_DIR / "wireproxy"
+
+    if not _is_elf(wgcf_bin):
+        url = _github_asset_url(
+            "ViRb3/wgcf",
+            lambda n: n.startswith("wgcf_") and "linux_amd64" in n and not n.endswith((".sig", ".sha256")),
+        ) or WGCF_FALLBACK_URL
+        _warp_log(f"unduh wgcf dari {url}")
+        if not _download_file(url, wgcf_bin, 5_000_000, b"\x7fELF"):
+            return None
+        _warp_log(f"wgcf OK ({wgcf_bin.stat().st_size} byte)")
+
+    if not _is_elf(wire_bin):
+        url = _github_asset_url(
+            "windtf/wireproxy",
+            lambda n: n.endswith("linux_amd64.tar.gz"),
+        ) or WIREPROXY_FALLBACK_URL
+        _warp_log(f"unduh wireproxy dari {url}")
+        tgz = WARP_DIR / "wireproxy.tar.gz"
+        if not _download_file(url, tgz, 1_000_000, b"\x1f\x8b"):
+            return None
+        try:
+            with tarfile.open(tgz, "r:gz") as tf:
+                member = next((m for m in tf.getmembers() if m.isfile() and Path(m.name).name == "wireproxy"), None)
+                if member is None:
+                    _warp_log("wireproxy.tar.gz tidak berisi biner 'wireproxy'")
+                    return None
+                tf.extract(member, WARP_DIR, filter="data")
+                src = WARP_DIR / member.name
+                if src != wire_bin:
+                    src.replace(wire_bin)
+                os.chmod(wire_bin, 0o755)
+        except Exception as e:
+            _warp_log(f"ekstrak wireproxy gagal: {e}")
+            return None
+        if not _is_elf(wire_bin):
+            _warp_log("wireproxy hasil ekstrak bukan ELF")
+            return None
+        _warp_log(f"wireproxy OK ({wire_bin.stat().st_size} byte)")
+    return wgcf_bin, wire_bin
+
+
+def _run_wgcf(args: list[str], timeout: int) -> subprocess.CompletedProcess | None:
+    try:
+        return subprocess.run(
+            args, cwd=str(WARP_DIR), capture_output=True, text=True,
+            input="y\n", timeout=timeout,
+        )
+    except Exception as e:
+        _warp_log(f"wgcf {' '.join(args[1:])} error: {e}")
+        return None
+
+
+def _socks5_probe_warp(timeout: float = 20.0) -> bool:
+    """Verifikasi end-to-end: CONNECT SOCKS5 ke www.cloudflare.com:443,
+    TLS, GET /cdn-cgi/trace — sukses hanya bila respons berisi 'warp=on'."""
+
+    def recv_exact(sock, n: int) -> bytes:
+        buf = b""
+        while len(buf) < n:
+            chunk = sock.recv(n - len(buf))
+            if not chunk:
+                break
+            buf += chunk
+        return buf
+
+    try:
+        sock = socket.create_connection((WARP_SOCKS_HOST, WARP_SOCKS_PORT), timeout=timeout)
+        sock.settimeout(timeout)
+        sock.sendall(b"\x05\x01\x00")
+        if recv_exact(sock, 2) != b"\x05\x00":
+            sock.close()
+            return False
+        host = b"www.cloudflare.com"
+        sock.sendall(b"\x05\x01\x00\x03" + bytes([len(host)]) + host + (443).to_bytes(2, "big"))
+        rep = recv_exact(sock, 4)
+        if len(rep) < 4 or rep[0] != 0x05 or rep[1] != 0x00:
+            sock.close()
+            return False
+        atyp = rep[3]
+        if atyp == 0x01:        # IPv4
+            recv_exact(sock, 6)
+        elif atyp == 0x03:      # domain
+            ln = recv_exact(sock, 1)
+            if not ln:
+                sock.close()
+                return False
+            recv_exact(sock, ln[0] + 2)
+        elif atyp == 0x04:      # IPv6
+            recv_exact(sock, 18)
+        else:
+            sock.close()
+            return False
+        ctx = ssl.create_default_context()
+        tls = ctx.wrap_socket(sock, server_hostname="www.cloudflare.com")
+        tls.sendall(
+            b"GET /cdn-cgi/trace HTTP/1.1\r\nHost: www.cloudflare.com\r\n"
+            b"Connection: close\r\nUser-Agent: DigitCuan-Downloader\r\n\r\n"
+        )
+        data = b""
+        while True:
+            chunk = tls.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+            if len(data) > 65536:
+                break
+        tls.close()
+        return "warp=on" in data.decode("utf-8", "replace")
+    except Exception as e:
+        _warp_log(f"probe warp gagal: {e}")
+        return False
+
+
+def _warp_bootstrap() -> None:
+    """Thread background: siapkan WARP. TIDAK PERNAH raise — semua kegagalan
+    dicatat dan YouTube fallback ke direct."""
+    try:
+        _warp_log("bootstrap mulai (background, non-blocking)")
+        bins = _ensure_warp_binaries()
+        if bins is None:
+            _warp_log("bootstrap GAGAL: biner tidak tersedia — YouTube fallback direct")
+            return
+        wgcf_bin, wire_bin = bins
+
+        account = WARP_DIR / "wgcf-account.toml"
+        if not (account.exists() and account.stat().st_size > 0):
+            proc = _run_wgcf([str(wgcf_bin), "register", "--accept-tos"], timeout=60)
+            if proc is not None and proc.returncode != 0 and "unknown flag" in (proc.stderr or ""):
+                _warp_log("register --accept-tos tidak didukung, coba tanpa flag")
+                proc = _run_wgcf([str(wgcf_bin), "register"], timeout=60)
+            if proc is not None:
+                tail = ((proc.stdout or "") + (proc.stderr or ""))[-300:].replace("\n", " ")
+                _warp_log(f"register rc={proc.returncode}: {tail}")
+            # Issue wgcf #515: register kadang rc!=0 tapi account tetap dibuat.
+            if not (account.exists() and account.stat().st_size > 0):
+                _warp_log("bootstrap GAGAL: wgcf-account.toml tidak terbentuk — YouTube fallback direct")
+                return
+        else:
+            _warp_log("wgcf-account.toml sudah ada — lewati register")
+
+        profile = WARP_DIR / "wgcf-profile.conf"
+        proc = _run_wgcf([str(wgcf_bin), "generate", "--keepalive"], timeout=30)
+        if proc is not None and proc.returncode != 0 and "unknown flag" in (proc.stderr or ""):
+            proc = _run_wgcf([str(wgcf_bin), "generate"], timeout=30)
+        if proc is None or proc.returncode != 0 or not (profile.exists() and profile.stat().st_size > 0):
+            _warp_log("bootstrap GAGAL: wgcf generate gagal — YouTube fallback direct")
+            return
+        _warp_log("wgcf-profile.conf OK")
+
+        conf_text = profile.read_text()
+        conf_text += (
+            "\n[Socks5]\nBindAddress = 127.0.0.1:1080\n"
+            "\n[http]\nBindAddress = 127.0.0.1:1081\n"
+        )
+        conf = WARP_DIR / "wireproxy.conf"
+        conf.write_text(conf_text)
+
+        logf = open(WARP_DIR / "wireproxy.log", "ab")
+        proc = subprocess.Popen(
+            [str(wire_bin), "-c", str(conf)],
+            cwd=str(WARP_DIR), stdout=logf, stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        _WARP["proc"] = proc
+        _warp_log(f"wireproxy start (pid {proc.pid})")
+
+        # Tunggu listener SOCKS naik (maks 15 dtk).
+        deadline = time.monotonic() + 15
+        socks_up = False
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                _warp_log(f"wireproxy mati mendadak rc={proc.returncode} — YouTube fallback direct")
+                _stop_warp()
+                return
+            try:
+                with socket.create_connection((WARP_SOCKS_HOST, WARP_SOCKS_PORT), timeout=1):
+                    socks_up = True
+                    break
+            except OSError:
+                time.sleep(0.5)
+        if not socks_up:
+            _warp_log("bootstrap GAGAL: SOCKS 1080 tidak naik dalam 15 dtk — YouTube fallback direct")
+            _stop_warp()
+            return
+
+        # Verifikasi end-to-end: lalu lintas benar-benar keluar via WARP.
+        if _socks5_probe_warp(timeout=20.0):
+            _WARP["up"] = True
+            _WARP["healthy"] = True
+            _WARP["last_check"] = time.monotonic()
+            _warp_log("WARP AKTIF — YouTube akan lewat socks5://127.0.0.1:1080 (probe warp=on)")
+        else:
+            _warp_log("bootstrap GAGAL: probe warp=on tidak lolos (kemungkinan UDP diblokir) — YouTube fallback direct")
+            _stop_warp()
+    except Exception as e:
+        _warp_log(f"bootstrap GAGAL tak terduga: {e!r} — YouTube fallback direct")
+        _stop_warp()
+
+
+def _start_warp_bootstrap() -> None:
+    if _WARP["started"]:
+        return
+    _WARP["started"] = True
+    threading.Thread(target=_warp_bootstrap, name="warp-bootstrap", daemon=True).start()
+
+
+def _stop_warp() -> None:
+    proc = _WARP.get("proc")
+    _WARP["proc"] = None
+    _WARP["up"] = False
+    _WARP["healthy"] = False
+    if proc is not None and proc.poll() is None:
+        try:
+            proc.terminate()
+            proc.wait(timeout=5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+
+def _warp_healthy() -> bool:
+    """Cek murah (cache 10 dtk): apakah SOCKS WARP masih hidup."""
+    if not _WARP["up"]:
+        return False
+    now = time.monotonic()
+    if now - _WARP["last_check"] < 10.0:
+        return _WARP["healthy"]
+    ok = False
+    try:
+        with socket.create_connection((WARP_SOCKS_HOST, WARP_SOCKS_PORT), timeout=1.0):
+            ok = True
+    except OSError:
+        ok = False
+    if not ok and _WARP["healthy"]:
+        _warp_log("SOCKS 127.0.0.1:1080 mati — WARP dimatikan, YouTube fallback direct")
+    _WARP["healthy"] = ok
+    _WARP["last_check"] = now
+    return ok
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _start_warp_bootstrap()
+    yield
+    _stop_warp()
+
+
 BASE_DIR = Path(__file__).resolve().parent
 
-app = FastAPI(title="DigitCuan Downloader — TikTok, Douyin, YouTube, Instagram & Facebook", version="3.0.0")
+app = FastAPI(title="DigitCuan Downloader — TikTok, Douyin, YouTube, Instagram & Facebook", version="3.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -336,23 +686,32 @@ def _ytdlp_opts(platform: str) -> dict:
         "compat_opts": {"no-certifi"},
     }
     if platform == "youtube":
-          # Client Android + Android VR terbukti mengembalikan format 18
-      # (video+audio 360p) dari IP bersih — terverifikasi 8 Nov 2026
-      # dengan yt-dlp 2026.10.26, TANPA PO token dan TANPA JS runtime.
-      # JANGAN pakai tv_downgraded/web_embedded: tv_downgraded kena
-      # bot-check, web_embedded hanya mengembalikan storyboard (tanpa
-      # format video/audio). ios/tv/web/web_safari/tv_samsung juga
-      # kena bot-check dari IP ini. (android_vr di tabel policy yt-dlp
-      # memang “GVS PO token required”, tapi enforcement-nya selektif
-      # — dari IP bersih ia jalan tanpa token, sama seperti android.)
-      # Paksa IPv4 (setara CLI -4; di API Python tidak ada param
-      # force_ipv4 — caranya source_address "0.0.0.0", terverifikasi
-      # di yt_dlp/options.py + YoutubeDL.py:441): egress IPv6 Render
-      # bisa satu blok /64 yang di-flag YouTube.
-      opts["source_address"] = "0.0.0.0"
-      opts["extractor_args"] = {"youtube": {"player_client": ["android", "android_vr"]}}
+        # Client Android + Android VR terbukti mengembalikan format 18
+        # (video+audio 360p) dari IP bersih — terverifikasi 8 Nov 2026
+        # dengan yt-dlp 2026.10.26, TANPA PO token dan TANPA JS runtime.
+        # JANGAN pakai tv_downgraded/web_embedded: tv_downgraded kena
+        # bot-check, web_embedded hanya mengembalikan storyboard (tanpa
+        # format video/audio). ios/tv/web/web_safari/tv_samsung juga
+        # kena bot-check dari IP ini. (android_vr di tabel policy yt-dlp
+        # memang "GVS PO token required", tapi enforcement-nya selektif
+        # — dari IP bersih ia jalan tanpa token, sama seperti android.)
+        # Paksa IPv4 (setara CLI -4; di API Python tidak ada param
+        # force_ipv4 — caranya source_address "0.0.0.0", terverifikasi
+        # di yt_dlp/options.py + YoutubeDL.py:441): egress IPv6 Render
+        # bisa satu blok /64 yang di-flag YouTube.
+        opts["source_address"] = "0.0.0.0"
+        opts["extractor_args"] = {"youtube": {"player_client": ["android", "android_vr"]}}
+        # Egress via WARP bila tunnel hidup — HANYA YouTube. yt-dlp memakai
+        # implementasi SOCKS-nya sendiri (yt_dlp/socks.py, stdlib saja),
+        # jadi tidak butuh PySocks / paket tambahan.
+        if _warp_healthy():
+            opts["proxy"] = WARP_SOCKS_URL
+            if not _WARP["logged_use"]:
+                _WARP["logged_use"] = True
+                _warp_log("YouTube memakai proxy WARP socks5://127.0.0.1:1080")
     return opts
-      
+
+
 def _pick_combined_video(formats: list) -> dict | None:
     """Pilih format video gabungan (ada audio).
     Tingkat 1: format dengan vcodec+acodec eksplisit (YouTube 22/18).
