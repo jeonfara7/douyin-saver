@@ -350,7 +350,7 @@ def _ytdlp_opts(platform: str) -> dict:
       # di yt_dlp/options.py + YoutubeDL.py:441): egress IPv6 Render
       # bisa satu blok /64 yang di-flag YouTube.
       opts["source_address"] = "0.0.0.0"
-      opts["extractor_args"] = {"youtube": {"player_client": ["android", "android_vr"]}
+      opts["extractor_args"] = {"youtube": {"player_client": ["android", "android_vr"]}}
     return opts
       
 def _pick_combined_video(formats: list) -> dict | None:
