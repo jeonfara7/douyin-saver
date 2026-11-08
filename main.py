@@ -75,6 +75,7 @@ WARP_SOCKS_HOST = "127.0.0.1"
 WARP_SOCKS_PORT = 1080
 WARP_SOCKS_URL = f"socks5://{WARP_SOCKS_HOST}:{WARP_SOCKS_PORT}"
 WARP_HTTP_PORT = 1081
+WARP_HTTP_URL = f"http://{WARP_SOCKS_HOST}:{WARP_HTTP_PORT}"
 WARP_GITHUB_API = "https://api.github.com/repos/{repo}/releases/latest"
 WGCF_FALLBACK_URL = "https://github.com/ViRb3/wgcf/releases/download/v2.3.1/wgcf_2.3.1_linux_amd64"
 WIREPROXY_FALLBACK_URL = "https://github.com/windtf/wireproxy/releases/download/v1.1.2/wireproxy_linux_amd64.tar.gz"
@@ -85,7 +86,8 @@ _WARP = {
     "last_check": 0.0,    # monotonic detik cek terakhir
     "proc": None,         # subprocess.Popen wireproxy
     "started": False,     # guard agar bootstrap thread hanya sekali
-    "logged_use": False,  # log pemakaian proxy sekali per proses
+    "logged_use": False,     # log pemakaian proxy sekali per proses
+    "logged_download_use": False,  # log pemakaian proxy HTTP /download sekali per proses
 }
 
 
@@ -976,7 +978,19 @@ async def download_proxy(url: str, name: str = "video.mp4"):
     host = _check_host(url)
     safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:80] or "video.mp4"
     referer = _referer_for_host(host)
-    client = httpx.AsyncClient(follow_redirects=True, timeout=DOWNLOAD_TIMEOUT)
+    # URL googlevideo hasil ekstraksi YouTube terikat IP Cloudflare
+    # (param ip=) — bila diambil langsung dari IP Render, Google menolak
+    # (403). Jadi bila tunnel WARP sehat, unduhan googlevideo HARUS lewat
+    # proxy HTTP wireproxy (1081; httpx butuh http proxy, bukan SOCKS).
+    # Platform lain tetap direct — proxy tidak pernah dipakai untuk mereka.
+    use_warp = "googlevideo" in host and _warp_healthy()
+    if use_warp:
+        if not _WARP["logged_download_use"]:
+            _WARP["logged_download_use"] = True
+            _warp_log("Download googlevideo memakai proxy HTTP WARP http://127.0.0.1:1081")
+        client = httpx.AsyncClient(proxy=WARP_HTTP_URL, follow_redirects=True, timeout=DOWNLOAD_TIMEOUT)
+    else:
+        client = httpx.AsyncClient(follow_redirects=True, timeout=DOWNLOAD_TIMEOUT)
     try:
         req = client.build_request("GET", url, headers={"User-Agent": UA_MOBILE, "Referer": referer})
         resp = await client.send(req, stream=True)
